@@ -29,7 +29,7 @@ return {
           "--completion-style=detailed",
           "--function-arg-placeholders=true",
           "--fallback-style=llvm",
-          "--compile-commands-dir=" .. vim.env.HOME .. "/code/modular",
+          "--compile-commands-dir=" .. vim.env.HOME .. "/Development/modular",
         },
         filetypes = { "c", "cpp", "objc", "objcpp", "cc", "cxx", "h", "hpp", "cuda", "proto" },
         root_dir = lspconfig.util.root_pattern("compile_commands.json", "compile_flags.txt", ".clangd", ".git"),
