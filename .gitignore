@@ -16,3 +16,4 @@ karabiner_*.json
 **/.claude/settings.local.json
 config/github-copilot/apps.json
 config/github-copilot
+config/gh
