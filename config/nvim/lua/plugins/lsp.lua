@@ -1,76 +1,119 @@
 -- LSP configuration for multiple languages
--- This configuration ensures LSP servers start properly
--- Supports: C/C++ (clangd), Python (pyright), and Mojo (mojo-lsp-server)
+-- Uses LazyVim's opts pattern for proper integration
+-- Supports: C/C++ (clangd), Python (pyright), Mojo, TableGen, MLIR
+
+local modular_bin = vim.env.HOME .. "/Development/modular/.derived/build/bin"
+
 return {
+  -- clangd_extensions for enhanced C++ support
+  {
+    "p00f/clangd_extensions.nvim",
+    lazy = true,
+    config = function() end,
+    opts = {
+      inlay_hints = { inline = false },
+      ast = {
+        role_icons = {
+          type = "",
+          declaration = "",
+          expression = "",
+          specifier = "",
+          statement = "",
+          ["template argument"] = "",
+        },
+        kind_icons = {
+          Compound = "",
+          Recovery = "",
+          TranslationUnit = "",
+          PackExpansion = "",
+          TemplateTypeParm = "",
+          TemplateTemplateParm = "",
+          TemplateParamObject = "",
+        },
+      },
+    },
+  },
+
+  -- nvim-lspconfig with LazyVim opts pattern
   {
     "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
-    dependencies = {
-      "mason-org/mason.nvim",
-      "mason-org/mason-lspconfig.nvim",
-    },
-    config = function()
-      -- Setup mason first
-      require("mason").setup()
-      require("mason-lspconfig").setup({
-        ensure_installed = { "clangd", "pyright" },
-      })
-
-      -- Setup lspconfig
-      local lspconfig = require("lspconfig")
-
-      -- Configure clangd for C/C++
-      lspconfig.clangd.setup({
-        cmd = {
-          "clangd",
-          "--background-index",
-          "--clang-tidy",
-          "--header-insertion=iwyu",
-          "--completion-style=detailed",
-          "--function-arg-placeholders=true",
-          "--fallback-style=llvm",
-          "--compile-commands-dir=" .. vim.env.HOME .. "/Development/modular",
+    opts = {
+      servers = {
+        -- C/C++ configuration (extends LazyVim's clangd extra)
+        clangd = {
+          keys = {
+            { "<leader>ch", "<cmd>ClangdSwitchSourceHeader<cr>", desc = "Switch Source/Header (C/C++)" },
+          },
+          capabilities = {
+            offsetEncoding = { "utf-16" },
+          },
+          cmd = {
+            "clangd",
+            "--background-index",
+            "--clang-tidy",
+            "--header-insertion=iwyu",
+            "--completion-style=detailed",
+            "--function-arg-placeholders",
+            "--fallback-style=llvm",
+          },
+          init_options = {
+            usePlaceholders = true,
+            completeUnimported = true,
+            clangdFileStatus = true,
+          },
         },
-        filetypes = { "c", "cpp", "objc", "objcpp", "cc", "cxx", "h", "hpp", "cuda", "proto" },
-        root_dir = lspconfig.util.root_pattern("compile_commands.json", "compile_flags.txt", ".clangd", ".git"),
-        init_options = {
-          usePlaceholders = true,
-          completeUnimported = true,
-          clangdFileStatus = true,
-        },
-      })
 
-      -- Configure pyright for Python
-      lspconfig.pyright.setup({
-        filetypes = { "python" },
-        root_dir = lspconfig.util.root_pattern(
-          "pyproject.toml",
-          "setup.py",
-          "setup.cfg",
-          "requirements.txt",
-          "Pipfile",
-          "pyrightconfig.json",
-          ".git"
-        ),
-        settings = {
-          python = {
-            analysis = {
-              autoSearchPaths = true,
-              diagnosticMode = "workspace",
-              useLibraryCodeForTypes = true,
-              typeCheckingMode = "basic",
+        -- Python configuration
+        pyright = {
+          settings = {
+            python = {
+              analysis = {
+                autoSearchPaths = true,
+                diagnosticMode = "workspace",
+                useLibraryCodeForTypes = true,
+                typeCheckingMode = "basic",
+              },
             },
           },
         },
-      })
 
-      -- Configure Mojo LSP
-      lspconfig.mojo.setup({
-        filetypes = { "mojo" },
-        single_file_support = true,
-      })
+        -- Mojo configuration
+        mojo = {
+          cmd = { modular_bin .. "/mojo-lsp-server" },
+          filetypes = { "mojo" },
+          single_file_support = true,
+        },
 
-      -- Ensure .mojo files are recognized
+        -- TableGen LSP configuration
+        tblgen_lsp_server = {
+          cmd = { modular_bin .. "/tblgen-lsp-server" },
+          filetypes = { "tablegen" },
+          single_file_support = true,
+        },
+
+        -- MLIR LSP configuration (using modular's mlir server)
+        mlir_lsp_server = {
+          cmd = { modular_bin .. "/modular-lsp-server" },
+          filetypes = { "mlir" },
+          single_file_support = true,
+        },
+      },
+
+      -- Setup hook for clangd to integrate with clangd_extensions
+      setup = {
+        clangd = function(_, opts)
+          local clangd_ext_opts = LazyVim.opts("clangd_extensions.nvim")
+          require("clangd_extensions").setup(vim.tbl_deep_extend("force", clangd_ext_opts or {}, { server = opts }))
+          return false
+        end,
+      },
+    },
+  },
+
+  -- Ensure .mojo files are recognized
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = function(_, opts)
       vim.filetype.add({
         extension = {
           mojo = "mojo",
