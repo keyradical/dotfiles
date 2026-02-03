@@ -236,3 +236,5 @@ for name in ${(k)aliases}; do
   done
 done
 
+
+export PATH="/Users/konradkusiak/.pixi/bin:$PATH"
