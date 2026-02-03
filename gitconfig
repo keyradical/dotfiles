@@ -3,3 +3,5 @@
 	email = kkusiak@modular.com
 [core]
 	editor = nvim
+[init]
+	defaultBranch = main
