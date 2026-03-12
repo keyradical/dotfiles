@@ -24,3 +24,6 @@ end, { desc = "Copy filename" })
 -- Remap jump list navigation to avoid Zellij conflicts
 vim.keymap.set("n", "g;", "<C-o>", { desc = "Jump back" })
 vim.keymap.set("n", "g,", "<C-i>", { desc = "Jump forward" })
+
+-- Toggle between current and alternate (last visited) buffer
+vim.keymap.set("n", "<S-j>", "<C-^>", { desc = "Switch to alternate buffer" })

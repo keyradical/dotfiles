@@ -205,6 +205,8 @@ command -v ssh &> /dev/null && \
 alias weather="curl wttr.in"
 alias cls="clear && printf '\e[3J'"
 alias gs='git status'
+alias gst='git stash'
+alias gsp='git stash pop'
 
 case `uname` in
   Linux)

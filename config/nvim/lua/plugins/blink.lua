@@ -7,7 +7,7 @@ return {
       completion = {
         trigger = {
           -- Don't show completion automatically while typing
-          show_on_keyword = false,
+          show_on_keyword = true,
           -- Don't show after accepting a completion
           show_on_accept_on_trigger_character = false,
           -- Don't show when entering insert mode
