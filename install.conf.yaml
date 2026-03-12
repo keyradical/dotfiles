@@ -5,3 +5,9 @@
     ~/.config:
         path: config/
         create: true
+    ~/.claude/settings.json:
+        path: config/claude/settings.json
+        create: true
+    ~/.claude/hooks:
+        path: config/claude/hooks
+        create: true
