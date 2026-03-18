@@ -76,7 +76,7 @@
       "~/Library/Caches/bazel"
     ]
   },
-  "model": "opus",
+  "model": "opus[1m]",
   "hooks": {
     "Notification": [
       {

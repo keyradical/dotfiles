@@ -21,6 +21,12 @@ vim.keymap.set("n", "<leader>cf", function()
   vim.notify('Copied: "' .. filename .. '"')
 end, { desc = "Copy filename" })
 
+vim.keymap.set("n", "<leader>cd", function()
+  local dir = vim.fn.expand("%:p:h")
+  vim.fn.setreg("+", dir)
+  vim.notify('Copied: "' .. dir .. '"')
+end, { desc = "Copy directory path" })
+
 -- Remap jump list navigation to avoid Zellij conflicts
 vim.keymap.set("n", "g;", "<C-o>", { desc = "Jump back" })
 vim.keymap.set("n", "g,", "<C-i>", { desc = "Jump forward" })

@@ -11,3 +11,6 @@
     ~/.claude/hooks:
         path: config/claude/hooks
         create: true
+    ~/.hammerspoon:
+        path: config/hammerspoon
+        create: true
