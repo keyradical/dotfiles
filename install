@@ -2,14 +2,25 @@
 
 set -e
 
-CONFIG="install.conf.yaml"
-DOTBOT_DIR="dotbot"
-
-DOTBOT_BIN="bin/dotbot"
 BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG="install.conf.yaml"
 
-cd "${BASEDIR}"
-git -C "${DOTBOT_DIR}" submodule sync --quiet --recursive
-git submodule update --init --recursive "${DOTBOT_DIR}"
+# Install dotbot if not available
+if ! command -v dotbot &>/dev/null; then
+	if ! command -v brew &>/dev/null; then
+		echo "Error: brew is required but not installed." >&2
+		exit 1
+	fi
+	echo "Installing dotbot..."
+	brew install dotbot
+fi
 
-"${BASEDIR}/${DOTBOT_DIR}/${DOTBOT_BIN}" -d "${BASEDIR}" -c "${CONFIG}" "${@}"
+# Run dotbot
+dotbot -d "${BASEDIR}" -c "${CONFIG}" "${@}"
+
+# Install TPM if not already present
+TPM_DIR="${HOME}/.config/tmux/plugins/tpm"
+if [ ! -d "${TPM_DIR}" ]; then
+	echo "Installing TPM..."
+	git clone https://github.com/tmux-plugins/tpm "${TPM_DIR}"
+fi
