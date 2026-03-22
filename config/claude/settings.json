@@ -71,7 +71,7 @@
       "Bash(killall:*)",
       "Bash(pkill:*)"
     ],
-    "defaultMode": "acceptEdits",
+    "defaultMode": "default",
     "additionalDirectories": [
       "~/Library/Caches/bazel"
     ]
@@ -94,6 +94,7 @@
     "clangd-lsp@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
+  "effortLevel": "max",
   "voiceEnabled": true,
   "skipDangerousModePermissionPrompt": true
 }

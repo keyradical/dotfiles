@@ -12,6 +12,9 @@ return {
         mojo = { "mojo-format" },
       },
       formatters = {
+        ["clang-format"] = {
+          command = "/opt/homebrew/opt/llvm/bin/clang-format",
+        },
         ["mojo-format"] = {
           command = "mojo",
           args = { "format", "$FILENAME" },
