@@ -4,6 +4,14 @@
 
 local modular_bin = vim.env.HOME .. "/Development/modular/.derived/build/bin"
 
+local function find_lsp(name)
+  local dev_path = modular_bin .. "/" .. name
+  if vim.fn.executable(dev_path) == 1 then
+    return { dev_path }
+  end
+  return { name }
+end
+
 return {
   -- clangd_extensions for enhanced C++ support
   {
@@ -79,21 +87,21 @@ return {
 
         -- Mojo configuration
         mojo = {
-          cmd = { modular_bin .. "/mojo-lsp-server" },
+          cmd = find_lsp("mojo-lsp-server"),
           filetypes = { "mojo" },
           single_file_support = true,
         },
 
         -- TableGen LSP configuration
         tblgen_lsp_server = {
-          cmd = { modular_bin .. "/tblgen-lsp-server" },
+          cmd = find_lsp("tblgen-lsp-server"),
           filetypes = { "tablegen" },
           single_file_support = true,
         },
 
         -- MLIR LSP configuration (using modular's mlir server)
         mlir_lsp_server = {
-          cmd = { modular_bin .. "/modular-lsp-server" },
+          cmd = find_lsp("modular-lsp-server"),
           filetypes = { "mlir" },
           single_file_support = true,
         },

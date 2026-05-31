@@ -136,3 +136,4 @@ export GOCACHE=${XDG_CACHE_HOME:-$HOME/.cache}/go/build
 export GOMODCACHE=${XDG_CACHE_HOME:-$HOME/.cache}/go/pkg/mod
 export GOTMPDIR=${XDG_CACHE_HOME:-$HOME/.cache}/go/tmp
 export DISPLAY=:0
+. "$HOME/.cargo/env"
