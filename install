@@ -282,10 +282,16 @@ restore_parked_config
 # ── TPM (tmux plugin manager) ───────────────────────────────────────────────
 
 TPM_DIR="${HOME}/.config/tmux/plugins/tpm"
-if [[ -d "$TPM_DIR/.git" ]]; then
+if [[ -x "$TPM_DIR/tpm" ]]; then
+    :  # TPM main script present and executable
+elif [[ -d "$TPM_DIR/.git" ]]; then
     :  # already installed via git clone
 elif [[ -d "$TPM_DIR" ]]; then
-    ok "TPM directory already present (from dotfiles repo)"
+    info "TPM directory exists but main script missing — cloning..."
+    rm -rf "$TPM_DIR"
+    mkdir -p "$(dirname "$TPM_DIR")"
+    git clone --depth=1 https://github.com/tmux-plugins/tpm "$TPM_DIR"
+    ok "TPM installed"
 else
     info "Installing TPM (tmux plugin manager)..."
     mkdir -p "$(dirname "$TPM_DIR")"
