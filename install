@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 #
-# Bootstrap script: detects the current host, installs dotbot if needed,
-# and applies the right combination of dotbot YAMLs.
+# Bootstrap script: applies the shared dotbot config, plus an optional
+# host overlay.
 #
-# Hosts:
-#   mac     — macOS work laptop (Aerospace)
-#   pc      — Fedora desktop (Sway, PC bindings)
-#   laptop  — Fedora laptop / 2-in-1 (Sway, laptop bindings, autorotate)
+# Default (no arg) = lean install: shared configs only. Good for remote
+# SSH boxes — just nvim/tmux/zsh/git/kitty/claude/starship, no Aerospace
+# or Sway overlay.
+#
+# Host overlays:
+#   mac     — adds Aerospace
+#   pc      — adds Sway + waybar + PC bindings
+#   laptop  — adds Sway + waybar + laptop bindings (autorotate via local)
 #
 # Host selection precedence:
-#   1. CLI arg:           ./install pc
-#   2. $DOTFILES_HOST env: DOTFILES_HOST=laptop ./install
-#   3. ~/.dotfiles-host file
-#   4. uname == Darwin -> mac
-#   5. interactive prompt (linux only)
+#   1. CLI arg:           ./install mac
+#   2. $DOTFILES_HOST:    DOTFILES_HOST=laptop ./install
+#   3. ~/.dotfiles-host file (written by previous run)
+#   4. (none — lean install)
 
 set -euo pipefail
 
@@ -40,40 +43,22 @@ resolve_host() {
         cat "$HOST_FILE"
         return
     fi
-    if [[ "$(uname)" == "Darwin" ]]; then
-        echo "mac"
-        return
-    fi
     echo ""
 }
 
-prompt_host() {
-    local answer
-    echo "" >&2
-    echo "  Pick a host profile:" >&2
-    echo "    1) pc      Fedora desktop" >&2
-    echo "    2) laptop  Fedora laptop / 2-in-1" >&2
-    echo "" >&2
-    read -r -p "  [1/2] " answer
-    case "$answer" in
-        1|pc)     echo "pc" ;;
-        2|laptop) echo "laptop" ;;
-        *)        die "Unknown choice: $answer" ;;
-    esac
-}
-
 HOST="$(resolve_host "$@")"
-if [[ -z "$HOST" ]]; then
-    HOST="$(prompt_host)"
-fi
 
 case "$HOST" in
-    mac|pc|laptop) ;;
-    *) die "Unknown host '$HOST'. Expected: mac, pc, laptop." ;;
+    ""|mac|pc|laptop) ;;
+    *) die "Unknown host '$HOST'. Use one of: mac, pc, laptop (or no arg for lean install)." ;;
 esac
 
-echo "$HOST" > "$HOST_FILE"
-ok "Host = $HOST"
+if [[ -n "$HOST" ]]; then
+    echo "$HOST" > "$HOST_FILE"
+    ok "Host = $HOST"
+else
+    ok "Host = (none, lean install — pass mac/pc/laptop for host extras)"
+fi
 
 # ── Install dotbot ──────────────────────────────────────────────────────────
 
