@@ -4,7 +4,7 @@
 |----------|-----------|
 | `mac`    | macOS (AeroSpace) |
 | `pc`     | Fedora desktop (Sway) |
-| `laptop` | Fedora 2-in-1 (Sway + autorotate) |
+| `laptop` | Fedora 2-in-1 (Swawy) |
 
 ## Install
 
