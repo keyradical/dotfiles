@@ -98,8 +98,52 @@ install_dotbot
 
 # ── Run dotbot with the right combination of YAMLs ─────────────────────────
 
+# Dotbot refuses to replace an existing real file/dir with a symlink when
+# force: false (our default). This helper scans the YAML for link targets and
+# removes any that are real files/dirs (not symlinks) so dotbot can proceed.
+clean_link_conflicts() {
+    local conf="$1"
+    python3 - "$conf" <<'PY' 2>/dev/null
+import os, sys, yaml, shutil
+
+conf = sys.argv[1]
+if not os.path.isfile(conf):
+    sys.exit(0)
+
+with open(conf) as f:
+    data = yaml.safe_load(f) or []
+
+for item in data:
+    if not isinstance(item, dict):
+        continue
+    links = item.get("link")
+    if not links:
+        continue
+    # dotbot link: can be a flat dict or a list of dicts
+    targets = []
+    if isinstance(links, dict):
+        targets = list(links.keys())
+    elif isinstance(links, list):
+        for entry in links:
+            if isinstance(entry, dict):
+                targets.extend(entry.keys())
+
+    for target in targets:
+        target = os.path.expanduser(target)
+        if os.path.islink(target):
+            continue  # already a symlink — dotbot handles relinking
+        if os.path.exists(target):
+            print(f"[dotfiles] Removing conflicting real file/dir: {target}")
+            if os.path.isdir(target):
+                shutil.rmtree(target)
+            else:
+                os.remove(target)
+PY
+}
+
 run_dotbot() {
     local conf="$1"
+    clean_link_conflicts "$conf"
     info "Applying $conf"
     dotbot -d "$BASEDIR" -c "$conf"
 }
