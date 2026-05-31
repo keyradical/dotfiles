@@ -103,10 +103,11 @@ install_dotbot
 # removes any that are real files/dirs (not symlinks) so dotbot can proceed.
 clean_link_conflicts() {
     local conf="$1"
-    python3 - "$conf" <<'PY' 2>/dev/null
+    python3 - "$conf" "$BASEDIR" <<'PY' 2>/dev/null
 import os, sys, yaml, shutil
 
 conf = sys.argv[1]
+BASEDIR = os.path.abspath(sys.argv[2])
 if not os.path.isfile(conf):
     sys.exit(0)
 
@@ -130,8 +131,25 @@ for item in data:
 
     for target in targets:
         target = os.path.expanduser(target)
+
+        # If the target itself is a symlink, dotbot will relink it — skip.
         if os.path.islink(target):
-            continue  # already a symlink — dotbot handles relinking
+            continue
+
+        # If a parent directory is a symlink to the repo, the user has an
+        # old whole-dir symlink (e.g. ~/.config/sway -> repo/config/sway).
+        # Removing a file *inside* it would delete the repo file. Break the
+        # parent symlink first by removing it.
+        parent = os.path.dirname(target)
+        while parent and parent != os.path.expanduser("~") and parent != "/":
+            if os.path.islink(parent):
+                real = os.path.realpath(parent)
+                if real.startswith(BASEDIR):
+                    print(f"[dotfiles] Breaking legacy symlink: {parent} -> {real}")
+                    os.remove(parent)
+                    break
+            parent = os.path.dirname(parent)
+
         if os.path.exists(target):
             print(f"[dotfiles] Removing conflicting real file/dir: {target}")
             if os.path.isdir(target):
@@ -264,7 +282,11 @@ restore_parked_config
 # ── TPM (tmux plugin manager) ───────────────────────────────────────────────
 
 TPM_DIR="${HOME}/.config/tmux/plugins/tpm"
-if [[ ! -d "$TPM_DIR/.git" ]]; then
+if [[ -d "$TPM_DIR/.git" ]]; then
+    :  # already installed via git clone
+elif [[ -d "$TPM_DIR" ]]; then
+    ok "TPM directory already present (from dotfiles repo)"
+else
     info "Installing TPM (tmux plugin manager)..."
     mkdir -p "$(dirname "$TPM_DIR")"
     git clone --depth=1 https://github.com/tmux-plugins/tpm "$TPM_DIR"
