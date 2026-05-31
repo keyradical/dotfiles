@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+lock="${XDG_CONFIG_HOME:-$HOME/.config}/sway/scripts/lock"
+maybe_suspend="${XDG_CONFIG_HOME:-$HOME/.config}/sway/scripts/suspend-on-battery"
+
+pkill -x swayidle >/dev/null 2>&1 || true
+
+exec swayidle -w \
+    timeout 300 "$lock" \
+    timeout 900 "$maybe_suspend" \
+    before-sleep "$lock" \
+    lock "$lock"

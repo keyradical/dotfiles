@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Keep ASUS laptop on Balanced power profile always
+set -euo pipefail
+
+if command -v asusctl >/dev/null 2>&1; then
+    # Set both AC and battery profiles to Balanced
+    asusctl profile set Balanced 2>/dev/null || true
+fi

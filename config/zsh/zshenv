@@ -29,6 +29,7 @@ REPORTTIME=5
 # Add ~/.local to the environment
 fpath+=$HOME/.local/share/zsh/site-functions
 PATH=$HOME/.local/bin:$PATH
+PATH=$HOME/.npm-global/bin:$PATH
 MANPATH=$HOME/.local/share/man:$MANPATH
 INFOPATH=$HOME/.local/share/info:$INFOPATH
 
@@ -135,5 +136,21 @@ export GOPATH=$HOME/.local/share/go
 export GOCACHE=${XDG_CACHE_HOME:-$HOME/.cache}/go/build
 export GOMODCACHE=${XDG_CACHE_HOME:-$HOME/.cache}/go/pkg/mod
 export GOTMPDIR=${XDG_CACHE_HOME:-$HOME/.cache}/go/tmp
-export DISPLAY=:0
-. "$HOME/.cargo/env"
+# export DISPLAY=:0  # disabled: causes issues under pure Wayland sessions (e.g. Sway)
+
+# CUDA toolkit
+if [ -d /usr/local/cuda/bin ]; then
+  PATH=/usr/local/cuda/bin:$PATH
+fi
+if [ -d /usr/local/cuda/lib64 ]; then
+  export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+fi
+# Use gcc-15/g++-15 as CUDA host compiler if available (Fedora 44 gcc is too new for nvcc)
+if [ -x /usr/bin/g++-15 ]; then
+  export CUDAHOSTCXX=/usr/bin/g++-15
+  # nvcc ignores CUDAHOSTCXX for its version check; wrap it to always use g++-15
+  nvcc() { command nvcc -ccbin /usr/bin/g++-15 "$@"; }
+fi
+
+# Source cargo env if present (provides PATH for cargo-installed bins)
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"

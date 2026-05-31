@@ -1,0 +1,11 @@
+# Laptop-specific overlay (Fedora laptop, e.g. ROG Flow X13 2-in-1).
+# Applied AFTER hosts/_linux.conf.yaml.
+
+- defaults:
+    link:
+      relink: true
+      create: true
+      force: false
+
+- link:
+    ~/.config/sway/config.bindings: hosts/laptop/config/sway/bindings

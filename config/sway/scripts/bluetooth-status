@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Custom bluetooth status for Waybar
+set -euo pipefail
+
+LOG="${HOME}/.local/share/bluetooth-status.log"
+
+get_status() {
+    if ! bluetoothctl show >/dev/null 2>&1; then
+        echo '{"text":"","tooltip":"No bluetooth adapter","class":"disabled"}'
+        return
+    fi
+
+    if bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; then
+        local count
+        count=$(bluetoothctl devices Connected 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$count" -gt 0 ]; then
+            echo "{\"text\":\"<span color='#7aa2f7'></span> $count\",\"tooltip\":\"Bluetooth on ($count connected)\",\"class\":\"connected\"}"
+        else
+            echo '{"text":"<span color='\''#7aa2f7'\''></span>","tooltip":"Bluetooth on","class":"on"}'
+        fi
+    else
+        echo '{"text":"<span color='\''#f7768e'\''></span>","tooltip":"Bluetooth off","class":"off"}'
+    fi
+}
+
+get_status

@@ -1,0 +1,7 @@
+# Laptop-specific Sway keybindings
+# Keyboard has dedicated media keys (XF86Audio*).
+# No extra bindings needed here — the shared config already covers them.
+
+# Add laptop-specific bindings below as needed:
+# bindsym XF86MonBrightnessUp exec brightnessctl set 5%+
+# bindsym XF86MonBrightnessDown exec brightnessctl set 5%-

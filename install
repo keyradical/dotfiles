@@ -1,26 +1,182 @@
 #!/usr/bin/env bash
+#
+# Bootstrap script: detects the current host, installs dotbot if needed,
+# and applies the right combination of dotbot YAMLs.
+#
+# Hosts:
+#   mac     — macOS work laptop (Aerospace + Hammerspoon)
+#   pc      — Fedora desktop (Sway, PC bindings)
+#   laptop  — Fedora laptop / 2-in-1 (Sway, laptop bindings, autorotate)
+#
+# Host selection precedence:
+#   1. CLI arg:           ./install pc
+#   2. $DOTFILES_HOST env: DOTFILES_HOST=laptop ./install
+#   3. ~/.dotfiles-host file
+#   4. uname == Darwin -> mac
+#   5. interactive prompt (linux only)
 
-set -e
+set -euo pipefail
 
 BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG="install.conf.yaml"
+HOST_FILE="${HOME}/.dotfiles-host"
 
-# Install dotbot if not available
-if ! command -v dotbot &>/dev/null; then
-	if ! command -v brew &>/dev/null; then
-		echo "Error: brew is required but not installed." >&2
-		exit 1
-	fi
-	echo "Installing dotbot..."
-	brew install dotbot
+info()  { printf '\r[ .. ] %s\n' "$*"; }
+ok()    { printf '\r[ OK ] %s\n' "$*"; }
+warn()  { printf '\r[WARN] %s\n' "$*" >&2; }
+die()   { printf '\r[FAIL] %s\n' "$*" >&2; exit 1; }
+
+# ── Resolve host ────────────────────────────────────────────────────────────
+
+resolve_host() {
+    if [[ $# -ge 1 ]]; then
+        echo "$1"
+        return
+    fi
+    if [[ -n "${DOTFILES_HOST:-}" ]]; then
+        echo "$DOTFILES_HOST"
+        return
+    fi
+    if [[ -f "$HOST_FILE" ]]; then
+        cat "$HOST_FILE"
+        return
+    fi
+    if [[ "$(uname)" == "Darwin" ]]; then
+        echo "mac"
+        return
+    fi
+    echo ""
+}
+
+prompt_host() {
+    local answer
+    echo "" >&2
+    echo "  Pick a host profile:" >&2
+    echo "    1) pc      Fedora desktop" >&2
+    echo "    2) laptop  Fedora laptop / 2-in-1" >&2
+    echo "" >&2
+    read -r -p "  [1/2] " answer
+    case "$answer" in
+        1|pc)     echo "pc" ;;
+        2|laptop) echo "laptop" ;;
+        *)        die "Unknown choice: $answer" ;;
+    esac
+}
+
+HOST="$(resolve_host "$@")"
+if [[ -z "$HOST" ]]; then
+    HOST="$(prompt_host)"
 fi
 
-# Run dotbot
-dotbot -d "${BASEDIR}" -c "${CONFIG}" "${@}"
+case "$HOST" in
+    mac|pc|laptop) ;;
+    *) die "Unknown host '$HOST'. Expected: mac, pc, laptop." ;;
+esac
 
-# Install TPM if not already present
+echo "$HOST" > "$HOST_FILE"
+ok "Host = $HOST"
+
+# ── Install dotbot ──────────────────────────────────────────────────────────
+
+install_dotbot() {
+    if command -v dotbot >/dev/null 2>&1; then
+        return
+    fi
+    info "Installing dotbot..."
+    if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null 2>&1; then
+        brew install dotbot
+    elif command -v pipx >/dev/null 2>&1; then
+        pipx install dotbot
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 -m pip install --user dotbot
+    else
+        die "dotbot is not installed and no supported installer was found (brew/pipx/pip)."
+    fi
+    ok "dotbot installed"
+}
+
+install_dotbot
+
+# ── Run dotbot with the right combination of YAMLs ─────────────────────────
+
+run_dotbot() {
+    local conf="$1"
+    info "Applying $conf"
+    dotbot -d "$BASEDIR" -c "$conf"
+}
+
+# Legacy Mac layout safety check.
+# Older Mac dotfiles linked the entire ~/.config as one symlink into the repo,
+# which meant app-managed dirs (gh, github-copilot, fish, opencode, bk.yaml,
+# htop) ended up physically in the repo. This setup uses per-subdir symlinks
+# instead, so ~/.config must be a real directory. Abort with clear migration
+# instructions if we still see the old single-symlink layout.
+check_legacy_mac_layout() {
+    if [[ "$HOST" != "mac" ]]; then return; fi
+    if [[ ! -L "$HOME/.config" ]]; then return; fi
+    local target
+    target="$(readlink "$HOME/.config")"
+    case "$target" in
+        "$BASEDIR/config"|*"/.dotfiles/config") ;;
+        *) return ;;
+    esac
+    cat >&2 <<EOF
+
+  ⚠️  Legacy Mac layout detected: ~/.config is a symlink to the repo.
+      The new layout needs ~/.config to be a real directory.
+
+      Migration steps (run these once, then re-run ./install):
+
+        # 1. Park app-managed dirs that snuck into the repo
+        mkdir -p ~/.config-migration
+        for d in bk.yaml fish gh github-copilot htop opencode; do
+            [ -e "$target/\$d" ] && mv "$target/\$d" ~/.config-migration/
+        done
+
+        # 2. Drop the legacy ~/.config symlink
+        rm ~/.config
+
+        # 3. Re-run the installer
+        ./install
+
+        # 4. Move app data back into the new real ~/.config
+        for d in bk.yaml fish gh github-copilot htop opencode; do
+            [ -e ~/.config-migration/\$d ] && mv ~/.config-migration/\$d ~/.config/
+        done
+        rmdir ~/.config-migration 2>/dev/null || true
+
+EOF
+    die "Aborting to avoid touching live Mac config. Follow the migration steps above."
+}
+
+check_legacy_mac_layout
+
+run_dotbot "$BASEDIR/install.conf.yaml"
+
+case "$HOST" in
+    mac)
+        run_dotbot "$BASEDIR/hosts/mac/install.conf.yaml"
+        ;;
+    pc)
+        run_dotbot "$BASEDIR/hosts/_linux.conf.yaml"
+        run_dotbot "$BASEDIR/hosts/pc/install.conf.yaml"
+        ;;
+    laptop)
+        run_dotbot "$BASEDIR/hosts/_linux.conf.yaml"
+        run_dotbot "$BASEDIR/hosts/laptop/install.conf.yaml"
+        ;;
+esac
+
+# ── TPM (tmux plugin manager) ───────────────────────────────────────────────
+
 TPM_DIR="${HOME}/.config/tmux/plugins/tpm"
-if [ ! -d "${TPM_DIR}" ]; then
-	echo "Installing TPM..."
-	git clone https://github.com/tmux-plugins/tpm "${TPM_DIR}"
+if [[ ! -d "$TPM_DIR/.git" ]]; then
+    info "Installing TPM (tmux plugin manager)..."
+    mkdir -p "$(dirname "$TPM_DIR")"
+    git clone --depth=1 https://github.com/tmux-plugins/tpm "$TPM_DIR"
+    ok "TPM installed"
 fi
+
+ok "Done."
+echo ""
+echo "  Open a new shell to pick up the changes."
+echo "  In tmux, press prefix + I (Ctrl-A then capital I) to install plugins."

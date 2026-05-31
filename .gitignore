@@ -1,18 +1,26 @@
+# nvim — lockfiles regenerated per machine
 config/nvim/lazy-lock.json
 config/nvim/lazyvim.json
 
-*config/tmux/plugins/*
+# tmux — plugins installed by TPM at runtime
+config/tmux/plugins/
 
+# sway — per-machine generated/linked files
+config/sway/config.bindings
+config/sway/config.local
+
+# Editor noise
 tags
 *~
 *.swp
 .netrwhist
 *bundle*
 *vim/sessions*
+
+# App detritus that may end up under ~/.config in mixed-layout migrations
 *config/configstore*
 htoprc
 karabiner_*.json
+
+# Claude — local-only overrides
 **/.claude/settings.local.json
-config/github-copilot/apps.json
-config/github-copilot
-config/gh

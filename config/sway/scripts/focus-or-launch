@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Launch an app or focus it if already running
+# Usage: sway-focus-or-launch <app_id> <command> [args...]
+
+set -euo pipefail
+
+app_id="$1"
+shift
+
+# Try to focus existing window
+if swaymsg "[app_id=\"$app_id\"]" focus 2>/dev/null; then
+    # Check if it actually succeeded (swaymsg returns 0 even if no match)
+    # A more reliable check: see if any window has this app_id
+    if swaymsg -t get_tree | jq -e ".. | objects | select(.app_id==\"$app_id\")" >/dev/null 2>&1; then
+        exit 0
+    fi
+fi
+
+# Not found, launch it
+exec "$@"

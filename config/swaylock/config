@@ -1,0 +1,27 @@
+ignore-empty-password
+show-failed-attempts
+indicator-idle-visible
+indicator-radius=115
+indicator-thickness=8
+font=JetBrains Mono
+font-size=18
+color=1a1b26
+inside-color=24283bcc
+inside-clear-color=9ece6acc
+inside-ver-color=e0af68cc
+inside-wrong-color=f7768ecc
+key-hl-color=7aa2f7ff
+bs-hl-color=f7768eff
+ring-color=7aa2f7ff
+ring-clear-color=9ece6aff
+ring-ver-color=e0af68ff
+ring-wrong-color=f7768eff
+line-color=00000000
+separator-color=00000000
+text-color=c0caf5ff
+text-clear-color=1a1b26ff
+text-ver-color=1a1b26ff
+text-wrong-color=1a1b26ff
+layout-bg-color=00000000
+layout-border-color=00000000
+layout-text-color=c0caf5ff

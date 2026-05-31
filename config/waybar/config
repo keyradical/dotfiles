@@ -1,0 +1,97 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "spacing": 6,
+  "modules-left": ["sway/workspaces", "sway/mode", "sway/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["tray", "custom/display-pilot", "custom/bluetooth", "custom/asus", "network", "pulseaudio", "backlight", "battery", "sway/language", "idle_inhibitor", "custom/wdisplays", "custom/power"],
+  "sway/workspaces": {
+    "disable-scroll": true,
+    "all-outputs": true,
+    "format": "{name}"
+  },
+  "sway/window": {
+    "format": "{}",
+    "max-length": 64,
+    "separate-outputs": true
+  },
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "{:%A, %d %B %Y\n%H:%M:%S}"
+  },
+  "sway/language": {
+    "format": "{flag}",
+    "tooltip-format": "Layout: {long}",
+    "min-length": 3,
+    "max-length": 3,
+    "on-click": "swaymsg input type:keyboard xkb_switch_layout next"
+  },
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": "awake",
+      "deactivated": "idle"
+    }
+  },
+  "pulseaudio": {
+    "format": "<span color='#bb9af7'>{icon}</span> {volume}%",
+    "format-muted": "<span color='#f7768e'></span> muted",
+    "format-icons": {
+      "default": ["", "", ""]
+    },
+    "tooltip-format": "Volume",
+    "scroll-step": 5,
+    "on-click": "pavucontrol"
+  },
+  "backlight": {
+    "format": "<span color='#e0af68'></span> {percent}%",
+    "tooltip-format": "Brightness"
+  },
+  "battery": {
+    "states": {
+      "warning": 25,
+      "critical": 10
+    },
+    "format": "{icon} {capacity}%",
+    "format-charging": "<span color='#9ece6a'></span> {capacity}%",
+    "format-plugged": "<span color='#9ece6a'></span> {capacity}%",
+    "format-icons": ["", "", "", "", ""]
+  },
+  "network": {
+    "format-wifi": "<span color='#7aa2f7'></span> {essid}",
+    "format-ethernet": "<span color='#7aa2f7'></span> wired",
+    "format-disconnected": "<span color='#f7768e'></span> offline"
+  },
+  "custom/bluetooth": {
+    "exec": "/home/konrad/.config/sway/scripts/bluetooth-status",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "/home/konrad/.config/sway/scripts/bluetooth-toggle"
+  },
+  "custom/asus": {
+    "exec": "/home/konrad/.config/sway/scripts/asus-status",
+    "return-type": "json",
+    "interval": 60,
+    "on-click": "rog-control-center"
+  },
+  "custom/display-pilot": {
+    "format": "<span color='#e0af68'></span>",
+    "on-click": "/home/konrad/.local/bin/display-pilot2-wrapper",
+    "tooltip": "Display Pilot 2"
+  },
+  "tray": {
+    "spacing": 8,
+    "icon-size": 14
+  },
+  "custom/wdisplays": {
+    "format": "<span color='#7aa2f7'>󰍹</span>",
+    "on-click": "wdisplays",
+    "tooltip": "Monitor setup"
+  },
+  "custom/power": {
+    "format": "<span color='#f7768e'></span>",
+    "on-click": "wlogout",
+    "tooltip": "Power menu"
+  }
+}

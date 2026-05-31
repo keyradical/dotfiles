@@ -1,0 +1,6 @@
+# PC-specific Sway keybindings
+# Keyboard has no dedicated media keys — use F-keys for volume.
+
+bindsym F1 exec $HOME/.config/sway/scripts/volume-osd down
+bindsym F2 exec $HOME/.config/sway/scripts/volume-osd up
+bindsym F3 exec $HOME/.config/sway/scripts/volume-osd mute

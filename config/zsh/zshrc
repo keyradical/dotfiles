@@ -17,11 +17,12 @@ source-plugin() {
   fi
 }
 
-# Add neo vim to PATH
-export PATH="$PATH:/opt/nvim-linux64/bin"
+# Add neo vim to PATH (Linux tarball install location, harmless if missing)
+[ -d /opt/nvim-linux64/bin ] && export PATH="$PATH:/opt/nvim-linux64/bin"
 
-# Add cargo to PATH
-export PATH="$PATH":"/home/konrad/.local/share/cargo/bin"
+# Add cargo bin to PATH (XDG layout from CARGO_HOME in zshenv)
+[ -d "$HOME/.local/share/cargo/bin" ] && \
+  export PATH="$PATH:$HOME/.local/share/cargo/bin"
 
 # Fish like automatic suggestions from command history
 source-plugin zsh-autosuggestions
@@ -79,6 +80,10 @@ setopt nobeep
 
 # Disable tty flow control, allows vim to use '<Ctrl>S'
 setopt noflowcontrol; stty -ixon
+
+# Don't print '%' when previous output lacks a trailing newline
+# (avoids a stray '%' at the top of the terminal from cursor-shape escapes)
+PROMPT_EOL_MARK=''
 
 # Enable completions in the middle of a word
 setopt completeinword
@@ -239,4 +244,8 @@ for name in ${(k)aliases}; do
 done
 
 
-export PATH="/Users/konradkusiak/.pixi/bin:$PATH"
+# pixi (per-user package manager)
+[ -d "$HOME/.pixi/bin" ] && export PATH="$HOME/.pixi/bin:$PATH"
+
+# opencode
+[ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"

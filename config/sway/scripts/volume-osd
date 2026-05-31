@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+action="${1:-}"
+
+case "$action" in
+    up)
+        wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+        wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+        target="@DEFAULT_AUDIO_SINK@"
+        title="Volume"
+        ;;
+    down)
+        wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+        wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+        target="@DEFAULT_AUDIO_SINK@"
+        title="Volume"
+        ;;
+    mute)
+        wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+        target="@DEFAULT_AUDIO_SINK@"
+        title="Volume"
+        ;;
+    mic-mute)
+        wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+        target="@DEFAULT_AUDIO_SOURCE@"
+        title="Mic"
+        ;;
+    *)
+        echo "usage: $0 up|down|mute|mic-mute" >&2
+        exit 2
+        ;;
+esac
+
+status="$(wpctl get-volume "$target")"
+percent="$(awk '{print int($2 * 100)}' <<<"$status")"
+id_name="${title,,}"
+
+if [[ "$status" == *"[MUTED]"* ]]; then
+    text="Muted"
+else
+    text="${percent}%"
+fi
+
+notify-send -u low \
+    "$title $text" \
+    -h "int:value:${percent}" \
+    -h "string:x-canonical-private-synchronous:${id_name}" \
+    -t 900

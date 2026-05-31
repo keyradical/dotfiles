@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+current="$(brightnessctl get)"
+max="$(brightnessctl max)"
+percent=$((current * 100 / max))
+id_file="${XDG_RUNTIME_DIR:-/tmp}/sway-osd-brightness.id"
+replace_args=()
+
+if [ -s "$id_file" ]; then
+    replace_args=(-r "$(cat "$id_file")")
+fi
+
+notify-send -a sway-osd -u low -e -p "${replace_args[@]}" \
+    -i display-brightness-symbolic \
+    "Brightness ${percent}%" \
+    -h "int:value:${percent}" \
+    -h "string:x-canonical-private-synchronous:brightness" \
+    -t 900 >"$id_file" || rm -f "$id_file"

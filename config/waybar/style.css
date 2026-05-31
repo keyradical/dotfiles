@@ -1,0 +1,135 @@
+* {
+  border: none;
+  font-family: "JetBrains Mono", "Font Awesome 6 Free", monospace;
+  font-size: 13px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: rgba(17, 19, 31, 0.74);
+  color: #c0caf5;
+}
+
+tooltip {
+  background: rgba(26, 27, 38, 0.98);
+  border: 1px solid #7aa2f7;
+  border-radius: 6px;
+  color: #c0caf5;
+}
+
+#workspaces button {
+  background: transparent;
+  border-radius: 6px;
+  color: #565f89;
+  margin: 5px 2px;
+  padding: 0 8px;
+}
+
+#workspaces button.focused,
+#workspaces button.visible {
+  background: #7aa2f7;
+  color: #1a1b26;
+}
+
+#workspaces button:hover {
+  background: rgba(122, 162, 247, 0.22);
+  box-shadow: none;
+  color: #c0caf5;
+}
+
+#workspaces button.urgent {
+  background: #f7768e;
+  color: #1a1b26;
+}
+
+#window {
+  color: #a9b1d6;
+  margin-left: 4px;
+}
+
+#clock,
+#idle_inhibitor,
+#pulseaudio,
+#backlight,
+#battery,
+#network,
+#custom-bluetooth,
+#custom-asus,
+#custom-display-pilot,
+#custom-wdisplays,
+#tray,
+#mode,
+#window,
+#custom-power,
+#language {
+  background: rgba(36, 40, 59, 0.82);
+  border: 1px solid rgba(122, 162, 247, 0.18);
+  border-radius: 6px;
+  margin: 4px 3px;
+  padding: 0 10px;
+}
+
+#clock {
+  color: #c0caf5;
+  font-weight: 600;
+}
+
+#mode {
+  background: rgba(224, 175, 104, 0.18);
+  border-color: rgba(224, 175, 104, 0.35);
+  color: #e0af68;
+}
+
+#idle_inhibitor.activated {
+  background: rgba(158, 206, 106, 0.18);
+  border-color: rgba(158, 206, 106, 0.35);
+  color: #9ece6a;
+}
+
+#network.disconnected,
+#pulseaudio.muted {
+  color: #f7768e;
+}
+
+#battery.warning {
+  color: #e0af68;
+}
+
+#battery.critical {
+  background: rgba(247, 118, 142, 0.16);
+  border-color: rgba(247, 118, 142, 0.35);
+  color: #f7768e;
+}
+
+#custom-power:hover {
+  background: rgba(247, 118, 142, 0.12);
+  border-color: rgba(247, 118, 142, 0.35);
+}
+
+#custom-bluetooth {
+  color: #7aa2f7;
+}
+
+#custom-bluetooth.off {
+  color: #f7768e;
+}
+
+#custom-bluetooth:hover {
+  background: rgba(122, 162, 247, 0.22);
+}
+
+#custom-asus:hover {
+  background: rgba(247, 118, 142, 0.12);
+  border-color: rgba(247, 118, 142, 0.35);
+}
+
+#custom-wdisplays:hover {
+  background: rgba(122, 162, 247, 0.22);
+}
+
+#custom-display-pilot:hover {
+  background: rgba(224, 175, 104, 0.12);
+  border-color: rgba(224, 175, 104, 0.35);
+}
+
+

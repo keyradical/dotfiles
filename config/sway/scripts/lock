@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config="${XDG_CONFIG_HOME:-$HOME/.config}/swaylock/config"
+runtime="${XDG_RUNTIME_DIR:-/tmp}"
+lock_image="$runtime/swaylock-${UID}.png"
+raw_image="$runtime/swaylock-${UID}.raw.png"
+
+lock_screen() {
+    swaylock -f -C "$config" "$@"
+}
+
+if command -v grim >/dev/null 2>&1 && command -v magick >/dev/null 2>&1; then
+    if grim "$raw_image" >/dev/null 2>&1; then
+        magick "$raw_image" \
+            -filter Gaussian -blur 0x16 \
+            -fill '#1a1b2688' -colorize 35 \
+            "$lock_image" >/dev/null 2>&1 || true
+        rm -f "$raw_image"
+
+        if [ -s "$lock_image" ]; then
+            lock_screen --image "$lock_image" --scaling fill
+            exit 0
+        fi
+    fi
+fi
+
+lock_screen

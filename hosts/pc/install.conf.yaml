@@ -1,0 +1,11 @@
+# PC-specific overlay (Fedora desktop).
+# Applied AFTER hosts/_linux.conf.yaml.
+
+- defaults:
+    link:
+      relink: true
+      create: true
+      force: false
+
+- link:
+    ~/.config/sway/config.bindings: hosts/pc/config/sway/bindings

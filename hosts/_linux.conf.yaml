@@ -1,0 +1,28 @@
+# Linux desktop dotbot overlay (Sway + Wayland tools).
+# Applied AFTER the shared install.conf.yaml on any Linux host.
+# Per-machine bits (PC vs laptop sway bindings) live in hosts/<host>/install.conf.yaml.
+
+- defaults:
+    link:
+      relink: true
+      create: true
+      force: false
+
+- create:
+    # ~/.config/sway is a real dir so config.bindings and config.local can
+    # live alongside the symlinked base config without writing through.
+    - ~/.config/sway
+
+- link:
+    # Shared sway pieces (config + scripts). Per-host bindings come from
+    # hosts/<host>/install.conf.yaml.
+    ~/.config/sway/config:   config/sway/config
+    ~/.config/sway/scripts:  config/sway/scripts
+
+    # Other Wayland tools — full dir symlinks.
+    ~/.config/waybar:    config/waybar
+    ~/.config/swaylock:  config/swaylock
+    ~/.config/wlogout:   config/wlogout
+    ~/.config/fuzzel:    config/fuzzel
+    ~/.config/gtk-3.0:   config/gtk-3.0
+    ~/.config/gtk-4.0:   config/gtk-4.0

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Toggle bluetooth power on/off
+set -euo pipefail
+
+BLUETOOTHCTL="/usr/bin/bluetoothctl"
+LOG="${HOME}/.local/share/bluetooth-toggle.log"
+
+log_msg() {
+    echo "$(date '+%H:%M:%S') $1" >> "$LOG"
+}
+
+if [ ! -x "$BLUETOOTHCTL" ]; then
+    log_msg "ERROR: bluetoothctl not found at $BLUETOOTHCTL"
+    exit 1
+fi
+
+if $BLUETOOTHCTL show 2>/dev/null | grep -q 'Powered: yes'; then
+    log_msg "Powering off"
+    $BLUETOOTHCTL power off >> "$LOG" 2>&1 || log_msg "ERROR: power off failed"
+else
+    log_msg "Powering on"
+    $BLUETOOTHCTL power on >> "$LOG" 2>&1 || log_msg "ERROR: power on failed"
+fi

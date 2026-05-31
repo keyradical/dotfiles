@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+shopt -s nullglob
+
+for online in /sys/class/power_supply/{AC,ACAD,ADP,ADP0,AC0,ACAD0,USB}*/online; do
+    if [ "$(cat "$online" 2>/dev/null || echo 0)" = "1" ]; then
+        exit 0
+    fi
+done
+
+has_battery=0
+for type_file in /sys/class/power_supply/*/type; do
+    if [ "$(cat "$type_file" 2>/dev/null || true)" = "Battery" ]; then
+        has_battery=1
+        break
+    fi
+done
+
+if [ "$has_battery" = "1" ]; then
+    systemctl suspend
+fi

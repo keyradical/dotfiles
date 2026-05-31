@@ -1,0 +1,12 @@
+# Mac-only dotbot overlay.
+# Applied AFTER the shared install.conf.yaml.
+
+- defaults:
+    link:
+      relink: true
+      create: true
+      force: false
+
+- link:
+    ~/.config/aerospace: hosts/mac/config/aerospace
+    ~/.hammerspoon:      hosts/mac/hammerspoon

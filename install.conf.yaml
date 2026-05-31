@@ -1,16 +1,38 @@
+# Shared dotbot config — applied on every host (mac, pc, laptop).
+# Host-specific overlays live in hosts/<host>/install.conf.yaml.
+
+- defaults:
+    link:
+      relink: true
+      create: true
+      force: false
+
 - clean: ['~']
 
+- create:
+    - ~/.config
+    - ~/.cache/zsh
+    - ~/.local/state/zsh
+
 - link:
+    # ---- Shell entry points (zsh looks for these in $HOME) ----
+    ~/.zshenv:   config/zsh/zshenv
+    ~/.zprofile: config/zsh/zprofile
+    ~/.zshrc:    config/zsh/zshrc
+    ~/.zlogin:   config/zsh/zlogin
+    ~/.zlogout:  config/zsh/zlogout
+
+    # ---- Git ----
     ~/.gitconfig: gitconfig
-    ~/.config:
-        path: config/
-        create: true
-    ~/.claude/settings.json:
-        path: config/claude/settings.json
-        create: true
-    ~/.claude/hooks:
-        path: config/claude/hooks
-        create: true
-    ~/.hammerspoon:
-        path: config/hammerspoon
-        create: true
+
+    # ---- ~/.config subdirs (shared across all hosts) ----
+    ~/.config/nvim:          config/nvim
+    ~/.config/tmux:          config/tmux
+    ~/.config/zsh:           config/zsh
+    ~/.config/kitty:         config/kitty
+    ~/.config/git:           config/git
+    ~/.config/starship.toml: config/starship.toml
+
+    # ---- Claude Code ----
+    ~/.claude/settings.json: config/claude/settings.json
+    ~/.claude/hooks:         config/claude/hooks

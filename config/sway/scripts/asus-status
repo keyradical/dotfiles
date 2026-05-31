@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# ASUS ROG status for Waybar — shows icon only if rog-control-center is installed
+set -euo pipefail
+
+if command -v rog-control-center >/dev/null 2>&1; then
+    echo '{"text":"<span color='\''#f7768e'\''></span>","tooltip":"ROG Control Center","class":"available"}'
+else
+    echo '{"text":"","tooltip":"","class":"hidden"}'
+fi

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Keep waybar running — restart it if it crashes
+set -euo pipefail
+
+PIDFILE="${HOME}/.local/share/waybar-restart.pid"
+
+# ── Kill previous wrapper and its children ──
+if [ -f "$PIDFILE" ]; then
+    old_pid=$(cat "$PIDFILE" 2>/dev/null) || old_pid=""
+    if [ -n "$old_pid" ] && [ "$old_pid" -ne $$ ] && kill -0 "$old_pid" 2>/dev/null; then
+        # Kill the wrapper itself
+        kill -9 "$old_pid" 2>/dev/null || true
+        # Kill any leftover children (waybar, sleep)
+        pkill -9 -P "$old_pid" 2>/dev/null || true
+        sleep 0.2
+    fi
+fi
+
+# Write our PID and clean up on exit
+echo $$ > "$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
+
+# ── Kill any orphaned waybars ──
+pkill -9 -x waybar >/dev/null 2>&1 || true
+sleep 0.3
+
+# ── Start waybar, restart if it dies ──
+while true; do
+    waybar 2>>"${HOME}/.local/share/waybar-crash.log" || true
+    sleep 2
+done
