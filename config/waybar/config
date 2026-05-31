@@ -64,20 +64,20 @@
     "format-disconnected": "<span color='#f7768e'></span> offline"
   },
   "custom/bluetooth": {
-    "exec": "/home/konrad/.config/sway/scripts/bluetooth-status",
+    "exec": "$HOME/.config/sway/scripts/bluetooth-status",
     "return-type": "json",
     "interval": 2,
-    "on-click": "/home/konrad/.config/sway/scripts/bluetooth-toggle"
+    "on-click": "$HOME/.config/sway/scripts/bluetooth-toggle"
   },
   "custom/asus": {
-    "exec": "/home/konrad/.config/sway/scripts/asus-status",
+    "exec": "$HOME/.config/sway/scripts/asus-status",
     "return-type": "json",
     "interval": 60,
     "on-click": "rog-control-center"
   },
   "custom/display-pilot": {
     "format": "<span color='#e0af68'></span>",
-    "on-click": "/home/konrad/.local/bin/display-pilot2-wrapper",
+    "on-click": "$HOME/.local/bin/display-pilot2-wrapper",
     "tooltip": "Display Pilot 2"
   },
   "tray": {

@@ -3,7 +3,7 @@
 	email = kkusiak@modular.com
 [core]
 	editor = nvim
-	excludesfile = /Users/konradkusiak/.gitignore_global
+	excludesfile = ~/.gitignore_global
 [init]
 	defaultBranch = main
 [alias]
