@@ -2,9 +2,9 @@
 
 | Host     | OS        |
 |----------|-----------|
-| `mac`    | macOS (AeroSpace) |
+| `mac`    | macOS (aerospace) |
 | `pc`     | Fedora desktop (Sway) |
-| `laptop` | Fedora 2-in-1 (Swawy) |
+| `laptop 2-in-1` | Fedora desktop (Sway) |
 
 ## Install
 
