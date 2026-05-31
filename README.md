@@ -58,28 +58,20 @@ The first run writes your choice to `~/.dotfiles-host`; subsequent runs reuse it
 ### Mac: migrating from the old `~/.config -> repo` symlink
 
 If your Mac was set up with the old layout (whole `~/.config` was one symlink
-to `<repo>/config`), `./install` will refuse to proceed and print exact
-migration steps. The short version:
+to `<repo>/config`), `./install` handles the migration itself — idempotent
+and resumable:
 
-```bash
-# 1. Park app-managed dirs that snuck into the repo
-mkdir -p ~/.config-migration
-for d in bk.yaml fish gh github-copilot htop opencode; do
-    [ -e ~/.config/$d ] && mv ~/.config/$d ~/.config-migration/
-done
+1. Parks every untracked entry under `repo/config/` (gh, github-copilot,
+   opencode, fish, bk.yaml, htop, …) into `~/.config-migration/`.
+2. Removes the legacy `~/.config` symlink.
+3. Runs dotbot, which creates `~/.config` as a real directory and lays down
+   per-subdir symlinks for the managed configs.
+4. Moves the parked app data back into the new real `~/.config`.
 
-# 2. Drop the old whole-dir symlink
-rm ~/.config
-
-# 3. Re-run
-./install
-
-# 4. Move app data back
-for d in bk.yaml fish gh github-copilot htop opencode; do
-    [ -e ~/.config-migration/$d ] && mv ~/.config-migration/$d ~/.config/
-done
-rmdir ~/.config-migration
-```
+If anything in `~/.config-migration/` collides with a freshly-linked entry,
+the script keeps the parked copy in place and prints a warning so you can
+merge manually. Re-running `./install` after a partial migration just picks
+up from where it stopped.
 
 ## Per-host sway customisation
 

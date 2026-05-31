@@ -104,13 +104,19 @@ run_dotbot() {
     dotbot -d "$BASEDIR" -c "$conf"
 }
 
-# Legacy Mac layout safety check.
+# Legacy Mac layout migration.
 # Older Mac dotfiles linked the entire ~/.config as one symlink into the repo,
 # which meant app-managed dirs (gh, github-copilot, fish, opencode, bk.yaml,
 # htop) ended up physically in the repo. This setup uses per-subdir symlinks
-# instead, so ~/.config must be a real directory. Abort with clear migration
-# instructions if we still see the old single-symlink layout.
-check_legacy_mac_layout() {
+# instead, so ~/.config must be a real directory.
+#
+# This function is idempotent: it parks any untracked entries in repo/config/
+# into ~/.config-migration/ once, drops the legacy symlink, and at the end
+# moves the parked entries back into the new real ~/.config. If interrupted
+# part-way, re-running just resumes from wherever it stopped.
+MIGRATION_DIR="${HOME}/.config-migration"
+
+park_untracked_config() {
     if [[ "$HOST" != "mac" ]]; then return; fi
     if [[ ! -L "$HOME/.config" ]]; then return; fi
     local target
@@ -119,36 +125,74 @@ check_legacy_mac_layout() {
         "$BASEDIR/config"|*"/.dotfiles/config") ;;
         *) return ;;
     esac
-    cat >&2 <<EOF
 
-  ⚠️  Legacy Mac layout detected: ~/.config is a symlink to the repo.
-      The new layout needs ~/.config to be a real directory.
+    info "Legacy ~/.config symlink detected — migrating to per-subdir layout"
+    mkdir -p "$MIGRATION_DIR"
 
-      Migration steps (run these once, then re-run ./install):
+    # Build a newline-separated, deduped list of candidate top-level entries
+    # under repo/config/ to preserve. Tracked entries (nvim, tmux, zsh, etc.)
+    # stay put — dotbot will symlink them into the new ~/.config. Anything
+    # else is app data that lives in the repo only because of the legacy
+    # whole-dir symlink, and needs to be parked.
+    local candidates
+    candidates=$(
+        {
+            if command -v git >/dev/null 2>&1 && [[ -d "$BASEDIR/.git" ]]; then
+                ( cd "$BASEDIR" && \
+                  git ls-files --others --directory --no-empty-directory config/ ) \
+                  | awk -F/ '$1=="config" && $2!="" { print $2 }'
+            fi
+            printf 'bk.yaml\nfish\ngh\ngithub-copilot\nhtop\nopencode\n'
+        } | sort -u
+    )
 
-        # 1. Park app-managed dirs that snuck into the repo
-        mkdir -p ~/.config-migration
-        for d in bk.yaml fish gh github-copilot htop opencode; do
-            [ -e "$target/\$d" ] && mv "$target/\$d" ~/.config-migration/
-        done
+    local count=0
+    local name src dst
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        src="$target/$name"          # resolves through the legacy symlink
+        dst="$MIGRATION_DIR/$name"
+        if [[ ! -e "$src" && ! -L "$src" ]]; then continue; fi
+        if [[ -e "$dst" || -L "$dst" ]]; then
+            warn "Already parked: $dst (skipping)"
+            continue
+        fi
+        mv "$src" "$dst"
+        count=$((count+1))
+    done <<< "$candidates"
 
-        # 2. Drop the legacy ~/.config symlink
-        rm ~/.config
+    if [[ $count -eq 1 ]]; then
+        ok "Parked $count entry -> $MIGRATION_DIR"
+    else
+        ok "Parked $count entries -> $MIGRATION_DIR"
+    fi
 
-        # 3. Re-run the installer
-        ./install
-
-        # 4. Move app data back into the new real ~/.config
-        for d in bk.yaml fish gh github-copilot htop opencode; do
-            [ -e ~/.config-migration/\$d ] && mv ~/.config-migration/\$d ~/.config/
-        done
-        rmdir ~/.config-migration 2>/dev/null || true
-
-EOF
-    die "Aborting to avoid touching live Mac config. Follow the migration steps above."
+    rm "$HOME/.config"
+    ok "Removed legacy ~/.config symlink"
 }
 
-check_legacy_mac_layout
+restore_parked_config() {
+    if [[ ! -d "$MIGRATION_DIR" ]]; then return; fi
+    info "Restoring parked entries into ~/.config"
+    local moved=0 skipped=0
+    shopt -s nullglob dotglob
+    for entry in "$MIGRATION_DIR"/*; do
+        local name; name="$(basename "$entry")"
+        local dst="$HOME/.config/$name"
+        if [[ -e "$dst" || -L "$dst" ]]; then
+            warn "  ~/.config/$name already exists; leaving $entry in $MIGRATION_DIR"
+            skipped=$((skipped+1))
+            continue
+        fi
+        mv "$entry" "$dst"
+        moved=$((moved+1))
+    done
+    shopt -u nullglob dotglob
+    rmdir "$MIGRATION_DIR" 2>/dev/null && ok "Restore complete ($moved moved)" || \
+        warn "$skipped item(s) left in $MIGRATION_DIR — review and merge manually"
+}
+
+park_untracked_config
 
 run_dotbot "$BASEDIR/install.conf.yaml"
 
@@ -165,6 +209,9 @@ case "$HOST" in
         run_dotbot "$BASEDIR/hosts/laptop/install.conf.yaml"
         ;;
 esac
+
+# Restore any app data that the legacy-layout migration parked aside.
+restore_parked_config
 
 # ── TPM (tmux plugin manager) ───────────────────────────────────────────────
 
