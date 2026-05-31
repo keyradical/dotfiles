@@ -4,7 +4,7 @@
 # and applies the right combination of dotbot YAMLs.
 #
 # Hosts:
-#   mac     — macOS work laptop (Aerospace + Hammerspoon)
+#   mac     — macOS work laptop (Aerospace)
 #   pc      — Fedora desktop (Sway, PC bindings)
 #   laptop  — Fedora laptop / 2-in-1 (Sway, laptop bindings, autorotate)
 #

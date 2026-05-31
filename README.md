@@ -4,7 +4,7 @@ Cross-machine dotfiles for three hosts:
 
 | Host     | OS         | Notes                                      |
 |----------|------------|--------------------------------------------|
-| `mac`    | macOS      | Work laptop. Aerospace + Hammerspoon.      |
+| `mac`    | macOS      | Work laptop. Aerospace.                    |
 | `pc`     | Fedora 44  | Desktop. Sway, no media keys (F1/F2/F3).   |
 | `laptop` | Fedora 44  | Laptop / 2-in-1. Sway, XF86 keys, autorotate. |
 
@@ -18,7 +18,7 @@ config/                # shared, linked on every host
   starship.toml
   sway/ waybar/ swaylock/ wlogout/ fuzzel/ gtk-{3,4}.0/   (linked on linux hosts)
 hosts/
-  mac/                 # aerospace, hammerspoon, macos.sh
+  mac/                 # aerospace, macos.sh
   pc/                  # sway PC bindings
   laptop/              # sway laptop bindings
   _linux.conf.yaml     # shared linux WM dotbot rules (sway base, waybar, ...)
