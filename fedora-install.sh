@@ -370,25 +370,6 @@ install_zsh_plugins() {
     ok "zsh plugins ready"
 }
 
-# ─── TPM ─────────────────────────────────────────────────────────────────────
-
-install_tpm() {
-    if [[ -d "$TPM_DIR/.git" ]]; then
-        ok "TPM already installed"
-        return 0
-    fi
-
-    if [[ -d "$TPM_DIR" ]]; then
-        ok "TPM directory already present (skipping clone)"
-        return 0
-    fi
-
-    info "Installing TPM..."
-    mkdir -p "$(dirname "$TPM_DIR")"
-    git clone --depth=1 https://github.com/tmux-plugins/tpm "$TPM_DIR"
-    ok "TPM installed"
-}
-
 # ─── Dotfiles ──────────────────────────────────────────────────────────────────
 
 install_dotfiles() {
@@ -408,13 +389,7 @@ install_dotfiles() {
 
     info "Running dotbot installer (host=$host)..."
     DOTFILES_HOST="$host" "$DOTFILES_DIR/install"
-    ok "Dotfiles linked"
-
-    # Install tmux plugins if tpm exists but plugins are missing
-    if [[ -d "$HOME/.config/tmux/plugins/tpm" && ! -d "$HOME/.config/tmux/plugins/tmux-sensible" ]]; then
-        info "Installing tmux plugins via TPM..."
-        "$HOME/.config/tmux/plugins/tpm/bin/install_plugins" || warn "TPM plugin install failed"
-    fi
+    ok "Dotfiles linked (./install handles TPM + plugin install)"
 }
 
 # ─── Generate machine-specific Sway config ─────────────────────────────────
@@ -696,8 +671,7 @@ main() {
     install_starship
     install_dotbot
     install_zsh_plugins
-    install_tpm
-    install_dotfiles
+    install_dotfiles      # TPM + tmux plugin install handled by ./install
     generate_sway_local
     setup_services
     setup_iio_buffer

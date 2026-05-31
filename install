@@ -227,7 +227,22 @@ if [[ ! -d "$TPM_DIR/.git" ]]; then
     ok "TPM installed"
 fi
 
+# Install plugins declared in tmux.conf + remove ones no longer declared.
+# TPM ships these scripts that work headlessly (no prefix+I needed).
+if [[ -x "$TPM_DIR/bin/install_plugins" ]]; then
+    info "Installing tmux plugins via TPM..."
+    "$TPM_DIR/bin/install_plugins" >/dev/null 2>&1 \
+        && ok "tmux plugins installed" \
+        || warn "TPM install_plugins exited non-zero (will be retried on next run)"
+fi
+if [[ -x "$TPM_DIR/bin/clean_plugins" ]]; then
+    info "Cleaning tmux plugins no longer in tmux.conf..."
+    "$TPM_DIR/bin/clean_plugins" >/dev/null 2>&1 \
+        && ok "tmux plugins cleaned" \
+        || warn "TPM clean_plugins exited non-zero"
+fi
+
 ok "Done."
 echo ""
 echo "  Open a new shell to pick up the changes."
-echo "  In tmux, press prefix + I (Ctrl-A then capital I) to install plugins."
+echo "  For a running tmux: <prefix>:source-file ~/.config/tmux/tmux.conf"
