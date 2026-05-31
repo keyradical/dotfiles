@@ -138,8 +138,12 @@ park_untracked_config() {
     candidates=$(
         {
             if command -v git >/dev/null 2>&1 && [[ -d "$BASEDIR/.git" ]]; then
+                # --exclude-standard skips gitignored files like
+                # config/nvim/lazy-lock.json — without it, we'd extract
+                # "nvim" and incorrectly park the whole nvim dir.
                 ( cd "$BASEDIR" && \
-                  git ls-files --others --directory --no-empty-directory config/ ) \
+                  git ls-files --others --exclude-standard \
+                      --directory --no-empty-directory config/ ) \
                   | awk -F/ '$1=="config" && $2!="" { print $2 }'
             fi
             printf 'bk.yaml\nfish\ngh\ngithub-copilot\nhtop\nopencode\n'
