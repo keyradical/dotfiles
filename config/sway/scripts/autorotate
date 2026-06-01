@@ -5,8 +5,12 @@ Reads raw IIO accelerometer values directly and computes orientation
 """
 
 import os
+import glob
+import signal
+import shutil
 import subprocess
 import time
+import traceback
 
 MONITOR = "eDP-1"
 TOUCH_DEVICE = "1267:11394:ELAN9008:00_04F3:2C82"
@@ -15,6 +19,9 @@ THRESHOLD = 5
 LOG_FILE = os.path.expanduser("~/.local/share/sway-autorotate.log")
 STATE_FILE = os.path.expanduser("~/.local/share/sway-autorotate.state")
 PID_FILE = os.path.expanduser("~/.local/share/sway-autorotate.pid")
+SCRIPT_PATH = os.path.realpath(__file__)
+CURRENT_SWAYSOCK: str | None = None
+LAST_BUFFER_WARNING = 0.0
 
 
 def log(msg: str) -> None:
@@ -23,54 +30,127 @@ def log(msg: str) -> None:
         f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
 
 
-def get_sway_socket() -> str | None:
-    """Find the Sway IPC socket."""
-    # Try SWAYSOCK env var
+def socket_candidates() -> list[str]:
+    """Return likely Sway IPC sockets, newest first."""
+    candidates: list[str] = []
+
     sock = os.environ.get("SWAYSOCK")
     if sock and os.path.exists(sock):
-        log(f"Found SWAYSOCK from env: {sock}")
-        return sock
-    
-    # Try to find it from sway process
+        candidates.append(sock)
+
     runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
     if os.path.isdir(runtime):
-        for subdir in os.listdir(runtime):
-            if subdir.startswith("sway-ipc"):
-                sock = os.path.join(runtime, subdir, "sway-ipc.sock")
-                if os.path.exists(sock):
-                    log(f"Found SWAYSOCK by scanning: {sock}")
-                    return sock
-    log("WARNING: Could not find SWAYSOCK — swaymsg commands will fail")
-    return None
+        sockets = glob.glob(os.path.join(runtime, "sway-ipc.*.sock"))
+        sockets.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+        candidates.extend(sockets)
+
+    seen: set[str] = set()
+    unique = []
+    for candidate in candidates:
+        if candidate not in seen:
+            seen.add(candidate)
+            unique.append(candidate)
+    return unique
 
 
-def swaymsg(*args: str) -> None:
+def swaymsg(*args: str) -> bool:
     """Send a command to Sway via IPC."""
-    sock = get_sway_socket()
-    env = os.environ.copy()
-    if sock:
+    global CURRENT_SWAYSOCK
+
+    if not shutil.which("swaymsg"):
+        log("swaymsg error: command not found")
+        return False
+
+    errors: list[str] = []
+    for sock in socket_candidates():
+        env = os.environ.copy()
         env["SWAYSOCK"] = sock
-    result = subprocess.run(
-        ["swaymsg", *args],
-        check=False,
-        capture_output=True,
-        env=env,
-    )
+        try:
+            result = subprocess.run(
+                ["swaymsg", *args],
+                check=False,
+                capture_output=True,
+                env=env,
+            )
+        except OSError as e:
+            errors.append(f"{sock}: {e}")
+            continue
+        if result.returncode == 0:
+            if CURRENT_SWAYSOCK != sock:
+                log(f"Using SWAYSOCK: {sock}")
+            CURRENT_SWAYSOCK = sock
+            os.environ["SWAYSOCK"] = sock
+            return True
+
+        err = result.stderr.decode("utf-8", "replace").strip()
+        errors.append(f"{sock}: {err}")
+
+    env = os.environ.copy()
+    env.pop("SWAYSOCK", None)
+    try:
+        result = subprocess.run(
+            ["swaymsg", *args],
+            check=False,
+            capture_output=True,
+            env=env,
+        )
+    except OSError as e:
+        errors.append(f"default: {e}")
+        log("swaymsg error: " + " | ".join(errors))
+        return False
+    if result.returncode == 0:
+        CURRENT_SWAYSOCK = None
+        os.environ.pop("SWAYSOCK", None)
+        return True
+
+    err = result.stderr.decode("utf-8", "replace").strip()
+    if err:
+        errors.append(f"default: {err}")
+    log("swaymsg error: " + " | ".join(errors or ["no usable Sway socket"]))
+    return False
+
+
+def wlr_randr_rotate(transform: str) -> bool:
+    """Rotate the output using wlr-randr (no IPC socket needed)."""
+    if not shutil.which("wlr-randr"):
+        log("wlr-randr error: command not found")
+        return False
+
+    transform_arg = {
+        "0": "normal",
+        "90": "90",
+        "180": "180",
+        "270": "270",
+    }.get(transform, "normal")
+    try:
+        result = subprocess.run(
+            ["wlr-randr", "--output", MONITOR, "--transform", transform_arg],
+            check=False,
+            capture_output=True,
+        )
+    except OSError as e:
+        log(f"wlr-randr error: {e}")
+        return False
     if result.returncode != 0:
         err = result.stderr.decode("utf-8", "replace").strip()
-        log(f"swaymsg error: {err}")
+        log(f"wlr-randr error: {err}")
+        return False
+    return True
 
 
-def read_accel() -> tuple[int, int, int]:
+def read_accel() -> tuple[int, int, int] | None:
     """Read raw accelerometer X, Y, Z values."""
     try:
-        x = int(open(f"{IIO_PATH}/in_accel_x_raw").read().strip())
-        y = int(open(f"{IIO_PATH}/in_accel_y_raw").read().strip())
-        z = int(open(f"{IIO_PATH}/in_accel_z_raw").read().strip())
+        with open(f"{IIO_PATH}/in_accel_x_raw") as f:
+            x = int(f.read().strip())
+        with open(f"{IIO_PATH}/in_accel_y_raw") as f:
+            y = int(f.read().strip())
+        with open(f"{IIO_PATH}/in_accel_z_raw") as f:
+            z = int(f.read().strip())
         return x, y, z
     except (ValueError, OSError) as e:
         log(f"read error: {e}")
-        return 0, 0, 0
+        return None
 
 
 def notify(msg: str) -> None:
@@ -96,6 +176,8 @@ def check_buffer_enabled() -> bool:
 
 def ensure_buffer_enabled() -> None:
     """Re-enable the IIO buffer if it got disabled (e.g. after suspend/resume)."""
+    global LAST_BUFFER_WARNING
+
     if check_buffer_enabled():
         return
     try:
@@ -103,6 +185,10 @@ def ensure_buffer_enabled() -> None:
             f.write("1")
         log("Re-enabled IIO buffer (was disabled)")
     except OSError as e:
+        now = time.monotonic()
+        if now - LAST_BUFFER_WARNING < 300:
+            return
+        LAST_BUFFER_WARNING = now
         log(f"WARNING: Could not re-enable IIO buffer: {e}")
         notify("Autorotate: IIO buffer disabled. Check permissions.")
 
@@ -130,14 +216,16 @@ def apply_rotation(orientation: str) -> None:
     """Apply output transform for the given orientation."""
     transform_map = {
         "normal": "0",
-        "left-up": "270",    # physical clockwise → screen clockwise
-        "right-up": "90",    # physical counter-clockwise → screen counter-clockwise
+        "left-up": "90",
+        "right-up": "270",
         "bottom-up": "180",
     }
     transform = transform_map.get(orientation, "0")
     
-    log(f"Applying rotation: {orientation} → transform {transform}")
-    swaymsg("output", MONITOR, "transform", transform)
+    log(f"Applying rotation: {orientation} -> transform {transform}")
+    if not wlr_randr_rotate(transform):
+        swaymsg("output", MONITOR, "transform", transform)
+    # Touch mapping still needs swaymsg since wlr-randr doesn't handle inputs.
     swaymsg("input", TOUCH_DEVICE, "map_to_output", MONITOR)
 
 
@@ -162,6 +250,9 @@ def load_state() -> str | None:
 
 def cleanup_pid() -> None:
     try:
+        with open(PID_FILE, "r") as f:
+            if f.read().strip() != str(os.getpid()):
+                return
         os.remove(PID_FILE)
     except OSError:
         pass
@@ -178,17 +269,41 @@ def kill_previous() -> None:
         with open(PID_FILE, "r") as f:
             old_pid = int(f.read().strip())
         if old_pid != os.getpid():
+            if not is_our_process(old_pid):
+                log(f"Ignoring stale autorotate pid={old_pid}")
+                return
             try:
-                os.kill(old_pid, 9)
-                log(f"Killed previous autorotate pid={old_pid}")
-                time.sleep(0.3)
+                os.kill(old_pid, signal.SIGTERM)
+                log(f"Stopped previous autorotate pid={old_pid}")
+                for _ in range(10):
+                    time.sleep(0.1)
+                    os.kill(old_pid, 0)
+                os.kill(old_pid, signal.SIGKILL)
+                log(f"Force-killed previous autorotate pid={old_pid}")
             except ProcessLookupError:
                 pass
     except (OSError, ValueError):
         pass
 
 
+def is_our_process(pid: int) -> bool:
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            cmdline = f.read().decode("utf-8", "replace")
+    except OSError:
+        return False
+    return SCRIPT_PATH in cmdline or "sway/scripts/autorotate" in cmdline
+
+
+def handle_signal(signum: int, _frame: object) -> None:
+    log(f"Exiting on signal {signum}")
+    cleanup_pid()
+    raise SystemExit(0)
+
+
 def main() -> int:
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
     log("=== Autorotate started ===")
 
     # Prevent duplicates on Sway reload
@@ -208,12 +323,22 @@ def main() -> int:
 
         last_orientation = saved
 
+        loop_count = 0
         while True:
-            x, y, z = read_accel()
+            loop_count += 1
+            if loop_count % 30 == 0:
+                ensure_buffer_enabled()
+
+            accel = read_accel()
+            if accel is None:
+                time.sleep(1)
+                continue
+
+            x, y, z = accel
             orientation = compute_orientation(x, y, z)
 
             if orientation != last_orientation:
-                log(f"Orientation changed: {last_orientation} → {orientation} (x={x}, y={y}, z={z})")
+                log(f"Orientation changed: {last_orientation} -> {orientation} (x={x}, y={y}, z={z})")
                 apply_rotation(orientation)
                 save_state(orientation)
                 last_orientation = orientation
@@ -224,4 +349,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    while True:
+        try:
+            raise SystemExit(main())
+        except SystemExit:
+            raise
+        except Exception:
+            log("Unhandled error:\n" + traceback.format_exc())
+            time.sleep(5)

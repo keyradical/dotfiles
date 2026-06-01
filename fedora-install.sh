@@ -430,7 +430,7 @@ generate_sway_local() {
     if [[ "$IS_CONVERTIBLE" -eq 1 ]]; then
         {
             echo "# Auto-rotate for 2-in-1 convertibles"
-            echo 'exec_always pgrep -f "sway/scripts/autorotate" >/dev/null || $HOME/.config/sway/scripts/autorotate'
+            echo 'exec_always $HOME/.config/sway/scripts/autorotate'
             echo ""
         } >> "$file"
     fi
