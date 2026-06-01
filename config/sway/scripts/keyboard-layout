@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Waybar custom keyboard layout indicator
+set -euo pipefail
+
+layout="$(swaymsg -t get_inputs 2>/dev/null | \
+    jq -r '.[] | select(.type=="keyboard") | .xkb_active_layout_name' | \
+    head -1)"
+
+case "$layout" in
+    "English (US)") echo '{"text":"🇺🇸","tooltip":"English (US) — Ctrl+Super+Space to switch"}' ;;
+    "English (UK)") echo '{"text":"🇬🇧","tooltip":"English (UK) — Ctrl+Super+Space to switch"}' ;;
+    *) echo "{\"text\":\"⌨\",\"tooltip\":\"$layout — Ctrl+Super+Space to switch\"}" ;;
+esac
