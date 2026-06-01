@@ -1,18 +1,17 @@
 [Unit]
-Description=Enable IIO accelerometer buffer
+Description=Keep IIO accelerometer buffer enabled
 After=systemd-modules-load.service
 
 [Service]
-Type=oneshot
-# Retry enabling the buffer for up to 60 seconds — the device may not be ready at boot.
-ExecStart=/bin/sh -c 'for i in $(seq 1 20); do \
+Type=simple
+Restart=always
+RestartSec=5
+ExecStart=/bin/sh -c 'while true; do \
     if [ -f /sys/bus/iio/devices/iio:device0/buffer/enable ]; then \
-        echo 1 > /sys/bus/iio/devices/iio:device0/buffer/enable 2>/dev/null && exit 0; \
+        echo 1 > /sys/bus/iio/devices/iio:device0/buffer/enable 2>/dev/null; \
     fi; \
-    sleep 3; \
-done; \
-echo "Failed to enable IIO buffer after 60s" >&2; exit 1'
-RemainAfterExit=yes
+    sleep 5; \
+done'
 
 [Install]
 WantedBy=multi-user.target
