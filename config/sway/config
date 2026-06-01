@@ -43,8 +43,8 @@ bindsym $mod+d exec $menu
 bindsym $mod+Shift+f exec $HOME/.config/sway/scripts/focus-or-launch thunar thunar
 bindsym $mod+Shift+q kill
 bindsym Ctrl+Alt+w kill
-bindsym $mod+Shift+e exec wlogout -l ~/.config/wlogout/layout -C ~/.config/wlogout/style.css
-bindsym Ctrl+Alt+Delete exec wlogout -l ~/.config/wlogout/layout -C ~/.config/wlogout/style.css
+bindsym $mod+Shift+e exec wlogout -l ~/.config/wlogout/layout -C ~/.config/wlogout/style.css -b 5
+bindsym Ctrl+Alt+Delete exec wlogout -l ~/.config/wlogout/layout -C ~/.config/wlogout/style.css -b 5
 bindsym $mod+Shift+x exec $lock
 bindsym Ctrl+Alt+f fullscreen
 bindsym Ctrl+Mod4+space input type:keyboard xkb_switch_layout next

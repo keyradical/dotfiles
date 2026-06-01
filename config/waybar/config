@@ -90,7 +90,7 @@
   },
   "custom/power": {
     "format": "<span color='#f7768e'></span>",
-    "on-click": "wlogout -l ~/.config/wlogout/layout -C ~/.config/wlogout/style.css",
+    "on-click": "wlogout -l ~/.config/wlogout/layout -C ~/.config/wlogout/style.css -b 5",
     "tooltip": "Power menu"
   }
 }
