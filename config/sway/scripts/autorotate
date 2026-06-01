@@ -28,36 +28,37 @@ def get_sway_socket() -> str | None:
     # Try SWAYSOCK env var
     sock = os.environ.get("SWAYSOCK")
     if sock and os.path.exists(sock):
+        log(f"Found SWAYSOCK from env: {sock}")
         return sock
     
     # Try to find it from sway process
     runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
-    for subdir in os.listdir(runtime) if os.path.isdir(runtime) else []:
-        if subdir.startswith("sway-ipc"):
-            sock = os.path.join(runtime, subdir, "sway-ipc.sock")
-            if os.path.exists(sock):
-                return sock
+    if os.path.isdir(runtime):
+        for subdir in os.listdir(runtime):
+            if subdir.startswith("sway-ipc"):
+                sock = os.path.join(runtime, subdir, "sway-ipc.sock")
+                if os.path.exists(sock):
+                    log(f"Found SWAYSOCK by scanning: {sock}")
+                    return sock
+    log("WARNING: Could not find SWAYSOCK — swaymsg commands will fail")
     return None
 
 
 def swaymsg(*args: str) -> None:
     """Send a command to Sway via IPC."""
     sock = get_sway_socket()
+    env = os.environ.copy()
     if sock:
-        env = os.environ.copy()
         env["SWAYSOCK"] = sock
-        subprocess.run(
-            ["swaymsg", *args],
-            check=False,
-            capture_output=True,
-            env=env,
-        )
-    else:
-        subprocess.run(
-            ["swaymsg", *args],
-            check=False,
-            capture_output=True,
-        )
+    result = subprocess.run(
+        ["swaymsg", *args],
+        check=False,
+        capture_output=True,
+        env=env,
+    )
+    if result.returncode != 0:
+        err = result.stderr.decode("utf-8", "replace").strip()
+        log(f"swaymsg error: {err}")
 
 
 def read_accel() -> tuple[int, int, int]:
