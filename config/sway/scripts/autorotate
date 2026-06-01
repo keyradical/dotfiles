@@ -93,12 +93,17 @@ def check_buffer_enabled() -> bool:
         return False
 
 
-def warn_if_buffer_disabled() -> None:
-    """Warn if the IIO buffer is not enabled (sensor values will be stale)."""
-    if not check_buffer_enabled():
-        log("WARNING: IIO buffer is disabled. Accelerometer values will not update.")
-        log("  Run: sudo systemctl restart enable-iio-buffer.service")
-        notify("IIO buffer disabled. Run: sudo systemctl restart enable-iio-buffer.service")
+def ensure_buffer_enabled() -> None:
+    """Re-enable the IIO buffer if it got disabled (e.g. after suspend/resume)."""
+    if check_buffer_enabled():
+        return
+    try:
+        with open(f"{IIO_PATH}/buffer/enable", "w") as f:
+            f.write("1")
+        log("Re-enabled IIO buffer (was disabled)")
+    except OSError as e:
+        log(f"WARNING: Could not re-enable IIO buffer: {e}")
+        notify("Autorotate: IIO buffer disabled. Check permissions.")
 
 
 def compute_orientation(x: int, y: int, z: int) -> str:
@@ -190,7 +195,7 @@ def main() -> int:
     write_pid()
 
     try:
-        warn_if_buffer_disabled()
+        ensure_buffer_enabled()
 
         # On Sway reload, outputs reset to normal before exec_always runs.
         # Re-apply the last known orientation immediately so the screen
