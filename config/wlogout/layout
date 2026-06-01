@@ -31,6 +31,6 @@
 {
     "label": "hibernate",
     "action": "systemctl hibernate",
-    "text": " Hibernate",
+    "text": " Hibernate",
     "keybind": "h"
 }
