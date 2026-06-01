@@ -5,7 +5,7 @@
   "spacing": 6,
   "modules-left": ["sway/workspaces", "sway/mode", "sway/window"],
   "modules-center": ["clock"],
-  "modules-right": ["tray", "custom/display-pilot", "custom/bluetooth", "custom/asus", "network", "pulseaudio", "backlight", "battery", "sway/language", "idle_inhibitor", "custom/wdisplays", "custom/power"],
+  "modules-right": ["tray", "custom/display-pilot", "custom/bluetooth", "custom/asus", "network", "pulseaudio", "backlight", "battery", "custom/keyboard", "idle_inhibitor", "custom/wdisplays", "custom/power"],
   "sway/workspaces": {
     "disable-scroll": true,
     "all-outputs": true,
@@ -20,11 +20,10 @@
     "format": "{:%a %d %b  %H:%M}",
     "tooltip-format": "{:%A, %d %B %Y\n%H:%M:%S}"
   },
-  "sway/language": {
-    "format": "{flag}",
-    "tooltip-format": "Layout: {long}",
-    "min-length": 3,
-    "max-length": 3,
+  "custom/keyboard": {
+    "exec": "$HOME/.config/sway/scripts/keyboard-layout",
+    "return-type": "json",
+    "interval": 1,
     "on-click": "swaymsg input type:keyboard xkb_switch_layout next"
   },
   "idle_inhibitor": {

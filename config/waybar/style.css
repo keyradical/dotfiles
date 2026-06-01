@@ -57,6 +57,7 @@ tooltip {
 #custom-asus,
 #custom-display-pilot,
 #custom-wdisplays,
+#custom-keyboard,
 #tray,
 #mode,
 #window,
@@ -130,6 +131,10 @@ tooltip {
 #custom-display-pilot:hover {
   background: rgba(224, 175, 104, 0.12);
   border-color: rgba(224, 175, 104, 0.35);
+}
+
+#custom-keyboard:hover {
+  background: rgba(122, 162, 247, 0.22);
 }
 
 
