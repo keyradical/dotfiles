@@ -233,7 +233,10 @@ install_dnf_packages() {
         pipewire pipewire-pulseaudio pipewire-alsa wireplumber
 
         # ── bluetooth ──
-        bluez
+        bluez blueman
+
+        # ── system settings GUI ──
+        gnome-control-center
 
         # ── file manager + deps ──
         thunar dolphin breeze-icon-theme kio-extras gvfs gvfs-mtp gvfs-smb
