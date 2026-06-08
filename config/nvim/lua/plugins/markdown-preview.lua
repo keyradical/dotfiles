@@ -2,9 +2,11 @@ return {
   "iamcco/markdown-preview.nvim",
   ft = "markdown",
   cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
-  build = function()
-    vim.fn["mkdp#util#install"]()
-  end,
+  -- Use the bundled install.sh directly. The recommended
+  -- `vim.fn["mkdp#util#install"]()` build hook is unreliable through Lazy
+  -- (autoload file isn't always sourced before the hook runs) and silently
+  -- skips downloading the binary.
+  build = "cd app && bash install.sh",
   keys = {
     {
       "<leader>mb",
