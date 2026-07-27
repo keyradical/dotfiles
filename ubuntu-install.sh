@@ -244,7 +244,13 @@ install_neovim() {
 # ─── Dotfiles ────────────────────────────────────────────────────────────────
 
 install_dotfiles() {
-    if [[ -d "$DOTFILES_DIR/.git" ]]; then
+    if [[ "$DOTFILES_DIR" == "$SCRIPT_DIR" ]]; then
+        # Running from inside the repo, so this script IS a tracked file in it.
+        # bash reads scripts incrementally by byte offset, so pulling here could
+        # rewrite ubuntu-install.sh underneath the running interpreter and
+        # resume it mid-statement. Pull before invoking the script, not during.
+        info "Running from inside $DOTFILES_DIR — skipping self-pull"
+    elif [[ -d "$DOTFILES_DIR/.git" ]]; then
         info "Dotfiles repo already present at $DOTFILES_DIR"
         git -C "$DOTFILES_DIR" pull --ff-only || warn "Could not update dotfiles"
     else
