@@ -382,6 +382,33 @@ else
     fi
 fi
 
+# ── Claude Code ─────────────────────────────────────────────────────────────
+
+# install.conf.yaml links ~/.claude/settings.json and ~/.claude/hooks, so the
+# binary they configure belongs to this setup too.
+#
+# The native installer is sudo-free, needs no node, and drops a self-updating
+# launcher at ~/.local/bin/claude — already on PATH via zshenv. On macOS prefer
+# the brew cask so the rest of the mac toolchain keeps managing it (note that
+# brew installs do not auto-update; `brew upgrade` is on you).
+if command_exists claude; then
+    ok "claude already installed ($(claude --version 2>/dev/null || echo 'version unknown'))"
+elif [[ "$(uname)" == "Darwin" ]] && command_exists brew; then
+    info "Installing Claude Code via brew..."
+    if brew install --cask claude-code@latest; then
+        ok "claude installed"
+    else
+        warn "claude install failed — retry: brew install --cask claude-code@latest"
+    fi
+else
+    info "Installing Claude Code to ~/.local/bin..."
+    if curl -fsSL https://claude.ai/install.sh | bash; then
+        ok "claude installed"
+    else
+        warn "claude install failed — see https://code.claude.com/docs/en/setup"
+    fi
+fi
+
 # ── Zsh plugins ─────────────────────────────────────────────────────────────
 
 # zshrc's source-plugin() looks these up in ~/.local/share/zsh/plugins and
