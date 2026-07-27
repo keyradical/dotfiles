@@ -279,24 +279,51 @@ set_login_shell() {
         return 0
     fi
 
-    if chsh -s "$zsh_path" 2>/dev/null; then
-        ok "Login shell set to zsh (takes effect on next login)"
+    # Install the bash handoff first, unconditionally. It is idempotent and
+    # harmless, and it means an interrupted or impossible chsh still leaves a
+    # working zsh login.
+    #
+    # SHELL is exported alongside the exec because tmux launches panes with
+    # $SHELL as a NON-login shell — it never reads ~/.bash_profile — so without
+    # this every pane would come up in bash even after the handoff works.
+    # Match on the SHELL export, not just the exec: an earlier version of this
+    # script wrote a handoff without it, and that one needs replacing.
+    if grep -q 'dotfiles-zsh-handoff' "${HOME}/.bash_profile" 2>/dev/null; then
+        ok "zsh handoff already in ~/.bash_profile"
+    else
+        cat >> "${HOME}/.bash_profile" <<'GUARD'
+
+# dotfiles-zsh-handoff — added by ubuntu-install.sh. Hands off to zsh on login
+# and exports SHELL so tmux starts its panes in zsh too.
+if [ -z "$ZSH_VERSION" ] && command -v zsh >/dev/null 2>&1; then
+    SHELL="$(command -v zsh)"; export SHELL
+    exec zsh -l
+fi
+GUARD
+        ok "Added zsh handoff to ~/.bash_profile"
+    fi
+
+    # chsh authenticates through PAM and writes its password prompt to stderr.
+    # Never redirect that away — a hidden prompt is indistinguishable from a
+    # hang. Cloud/container accounts frequently have no password set at all, in
+    # which case no answer can ever succeed, so try passwordless sudo first.
+    if [[ -n "$SUDO" ]] && sudo -n true 2>/dev/null; then
+        if sudo -n chsh -s "$zsh_path" "$USER"; then
+            ok "Login shell set to zsh (takes effect on next login)"
+            return 0
+        fi
+        warn "sudo chsh failed — relying on the ~/.bash_profile handoff instead."
         return 0
     fi
 
-    # chsh needs a writable /etc/passwd and working PAM, neither of which is a
-    # given in a container. Hand off to bash instead.
-    warn "chsh failed (common in containers). Falling back to a bash handoff."
-    if ! grep -q 'exec zsh -l' "${HOME}/.bash_profile" 2>/dev/null; then
-        cat >> "${HOME}/.bash_profile" <<'GUARD'
-
-# Added by ubuntu-install.sh: hand off to zsh when chsh is unavailable.
-[ -z "$ZSH_VERSION" ] && command -v zsh >/dev/null && exec zsh -l
-GUARD
-        ok "Added zsh handoff to ~/.bash_profile"
+    info "chsh needs your account password. Press Ctrl-C to skip —"
+    info "the ~/.bash_profile handoff above already covers it."
+    if chsh -s "$zsh_path"; then
+        ok "Login shell set to zsh (takes effect on next login)"
     else
-        ok "zsh handoff already in ~/.bash_profile"
+        warn "chsh failed — relying on the ~/.bash_profile handoff instead."
     fi
+    return 0
 }
 
 # ─── Main ────────────────────────────────────────────────────────────────────
