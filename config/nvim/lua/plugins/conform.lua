@@ -9,6 +9,7 @@ return {
         cxx = { "clang-format" },
         h = { "clang-format" },
         hpp = { "clang-format" },
+        python = { "ruff_organize_imports", "ruff_format" },
         mojo = { "mojo-format" },
       },
       formatters = {

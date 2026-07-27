@@ -7,6 +7,14 @@
 # SSH boxes — just nvim/tmux/zsh/git/kitty/claude/starship, no Aerospace
 # or Sway overlay.
 #
+# Beyond linking, this script installs the userspace runtime deps that the
+# linked configs require unconditionally: dotbot, starship (zshrc evals it),
+# the zsh plugins (zshrc sources them), and TPM + tmux plugins. All of these
+# are sudo-free and distro-agnostic.
+#
+# It does NOT install OS packages (zsh, tmux, nvim, a compiler). Those need a
+# package manager and sudo — see fedora-install.sh or ubuntu-install.sh.
+#
 # Host overlays:
 #   mac     — adds Aerospace
 #   pc      — adds Sway + waybar + PC bindings
@@ -22,11 +30,35 @@ set -euo pipefail
 
 BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOST_FILE="${HOME}/.dotfiles-host"
+ZSH_PLUGINS_DIR="${HOME}/.local/share/zsh/plugins"
 
 info()  { printf '\r[ .. ] %s\n' "$*"; }
 ok()    { printf '\r[ OK ] %s\n' "$*"; }
 warn()  { printf '\r[WARN] %s\n' "$*" >&2; }
 die()   { printf '\r[FAIL] %s\n' "$*" >&2; exit 1; }
+
+command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+# pipx, `pip install --user`, and the starship installer all drop binaries into
+# ~/.local/bin. config/zsh/zshenv puts that on PATH, but this script runs under
+# bash, where it is usually absent (Ubuntu only adds it from ~/.profile, and
+# only for login shells). Prepend it so tools installed below are visible to the
+# command_exists checks that follow.
+export PATH="${HOME}/.local/bin:${PATH}"
+
+# Distro-appropriate install hint, used in dependency error messages.
+pkg_hint() {
+    local pkg="$1"
+    if command_exists apt-get; then
+        echo "sudo apt install -y $pkg"
+    elif command_exists dnf; then
+        echo "sudo dnf install -y $pkg"
+    elif command_exists brew; then
+        echo "brew install $pkg"
+    else
+        echo "install $pkg with your package manager"
+    fi
+}
 
 # ── Resolve host ────────────────────────────────────────────────────────────
 
@@ -63,23 +95,84 @@ fi
 # ── Install dotbot ──────────────────────────────────────────────────────────
 
 install_dotbot() {
-    if command -v dotbot >/dev/null 2>&1; then
+    if command_exists dotbot; then
         return
     fi
     info "Installing dotbot..."
-    if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null 2>&1; then
+    if [[ "$(uname)" == "Darwin" ]] && command_exists brew; then
         brew install dotbot
-    elif command -v pipx >/dev/null 2>&1; then
+    elif command_exists pipx; then
         pipx install dotbot
-    elif command -v python3 >/dev/null 2>&1; then
-        python3 -m pip install --user dotbot
+    elif command_exists python3; then
+        # Debian 12 / Ubuntu 24.04+ mark the system Python as externally
+        # managed (PEP 668), which makes `pip install --user` a hard error.
+        # Retry with the override before giving up, since there is no venv
+        # to fall back to at this point in the bootstrap.
+        python3 -m pip install --user dotbot \
+            || python3 -m pip install --user --break-system-packages dotbot \
+            || die "pip could not install dotbot. Install pipx first: $(pkg_hint pipx)"
     else
-        die "dotbot is not installed and no supported installer was found (brew/pipx/pip)."
+        die "dotbot needs brew, pipx or pip. On a fresh box run $(bootstrap_hint) instead."
     fi
+    command_exists dotbot || die "dotbot installed but not on PATH. Add ~/.local/bin to PATH and re-run."
     ok "dotbot installed"
 }
 
+# Fresh-box entry point hint for the dependency failures above.
+bootstrap_hint() {
+    if command_exists apt-get; then
+        echo "./ubuntu-install.sh"
+    elif command_exists dnf; then
+        echo "./fedora-install.sh"
+    else
+        echo "your distro bootstrap script"
+    fi
+}
+
+# clean_link_conflicts (below) parses the dotbot YAML with PyYAML. The system
+# python3 frequently lacks it — homebrew's python3 on macOS does — and because
+# that python3 call is the last command in the function with its stderr
+# discarded, a missing PyYAML used to abort this whole script under `set -e`
+# with no output at all and exit 1.
+#
+# dotbot itself cannot run without PyYAML, so whichever interpreter dotbot was
+# installed against is guaranteed to have it. Prefer that one, then fall back to
+# python3. The import test is the real gate, so a shebang we cannot parse just
+# falls through harmlessly.
+PYTHON_BIN=""
+resolve_python() {
+    local candidates=() dotbot_bin shebang interp py
+
+    dotbot_bin="$(command -v dotbot || true)"
+    if [[ -n "$dotbot_bin" && -f "$dotbot_bin" ]]; then
+        shebang="$(head -1 "$dotbot_bin")"
+        if [[ "$shebang" == '#!'* ]]; then
+            interp="${shebang#\#!}"
+            # Handle `#!/usr/bin/env python3` as well as an absolute path.
+            [[ "$interp" == */env\ * ]] && interp="${interp##*env }"
+            [[ "$interp" == *python* ]] && candidates+=("$interp")
+        fi
+    fi
+    candidates+=(python3)
+
+    for py in "${candidates[@]}"; do
+        if command_exists "$py" && "$py" -c 'import yaml' >/dev/null 2>&1; then
+            PYTHON_BIN="$py"
+            return 0
+        fi
+    done
+
+    warn "No python interpreter with PyYAML found (needed to clear conflicting files)."
+    if [[ "$(uname)" == "Darwin" ]]; then
+        die "Install it with: pip3 install --user pyyaml"
+    fi
+    warn "Install it with: $(pkg_hint python3-yaml)"
+    die "Or on a fresh box run $(bootstrap_hint), which installs it."
+}
+
 install_dotbot
+resolve_python
+ok "Using $PYTHON_BIN for link-conflict cleanup"
 
 # ── Run dotbot with the right combination of YAMLs ─────────────────────────
 
@@ -88,7 +181,7 @@ install_dotbot
 # removes any that are real files/dirs (not symlinks) so dotbot can proceed.
 clean_link_conflicts() {
     local conf="$1"
-    python3 - "$conf" "$BASEDIR" <<'PY' 2>/dev/null
+    "$PYTHON_BIN" - "$conf" "$BASEDIR" <<'PY'
 import os, sys, yaml, shutil
 
 conf = sys.argv[1]
@@ -264,6 +357,62 @@ esac
 # Restore any app data that the legacy-layout migration parked aside.
 restore_parked_config
 
+# ── Starship ────────────────────────────────────────────────────────────────
+
+# zshrc runs `eval "$(starship init zsh)"` with no guard, so linking zshrc
+# without starship present means an error on every prompt. Install it here
+# rather than leaving it to the per-distro bootstrap scripts.
+#
+# No sudo: the official script drops a static binary into ~/.local/bin, which
+# zshenv already puts on PATH. A distro bootstrap that prefers its own package
+# (e.g. `dnf install starship`) can run before this and the check short-circuits.
+if command_exists starship; then
+    ok "starship already installed"
+elif [[ "$(uname)" == "Darwin" ]] && command_exists brew; then
+    info "Installing starship via brew..."
+    brew install starship
+    ok "starship installed"
+else
+    info "Installing starship to ~/.local/bin..."
+    mkdir -p "${HOME}/.local/bin"
+    if curl -sS https://starship.rs/install.sh | sh -s -- -y -b "${HOME}/.local/bin"; then
+        ok "starship installed to ~/.local/bin"
+    else
+        warn "starship install failed — your prompt will error until it is installed"
+    fi
+fi
+
+# ── Zsh plugins ─────────────────────────────────────────────────────────────
+
+# zshrc's source-plugin() looks these up in ~/.local/share/zsh/plugins and
+# prints "zsh plugin not found: <name>" once per plugin per shell start when
+# they are absent. Keep this list in sync with the source-plugin calls in
+# config/zsh/zshrc.
+ZSH_PLUGINS=(
+    "zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions"
+    "zsh-history-substring-search|https://github.com/zsh-users/zsh-history-substring-search"
+    "zsh-syntax-highlighting|https://github.com/zsh-users/zsh-syntax-highlighting"
+    "zsh-completions|https://github.com/zsh-users/zsh-completions"
+)
+
+info "Installing zsh plugins..."
+mkdir -p "$ZSH_PLUGINS_DIR"
+for entry in "${ZSH_PLUGINS[@]}"; do
+    plugin_name="${entry%%|*}"
+    plugin_url="${entry##*|}"
+    plugin_dest="$ZSH_PLUGINS_DIR/$plugin_name"
+
+    if [[ -d "$plugin_dest/.git" ]]; then
+        git -C "$plugin_dest" pull --ff-only --quiet \
+            || warn "Could not update $plugin_name (keeping existing checkout)"
+    else
+        rm -rf "$plugin_dest"
+        git clone --depth=1 --quiet "$plugin_url" "$plugin_dest" \
+            || warn "Could not clone $plugin_name"
+    fi
+done
+ok "zsh plugins ready"
+
 # ── TPM (tmux plugin manager) ───────────────────────────────────────────────
 
 TPM_DIR="${HOME}/.config/tmux/plugins/tpm"
@@ -297,6 +446,29 @@ if [[ -x "$TPM_DIR/bin/clean_plugins" ]]; then
     "$TPM_DIR/bin/clean_plugins" >/dev/null 2>&1 \
         && ok "tmux plugins cleaned" \
         || warn "TPM clean_plugins exited non-zero"
+fi
+
+# ── OS package check ────────────────────────────────────────────────────────
+
+# These need a package manager and sudo, so they are out of scope here. Report
+# them instead of leaving the user to discover each one via a broken shell.
+MISSING_PKGS=()
+for cmd in zsh tmux nvim git curl; do
+    command_exists "$cmd" || MISSING_PKGS+=("$cmd")
+done
+
+# LazyVim compiles treesitter parsers and unzips Mason-installed LSP servers.
+for cmd in cc unzip; do
+    command_exists "$cmd" || MISSING_PKGS+=("$cmd")
+done
+
+if [[ ${#MISSING_PKGS[@]} -gt 0 ]]; then
+    warn "Missing OS packages: ${MISSING_PKGS[*]}"
+    if command_exists apt-get; then
+        warn "Run ./ubuntu-install.sh to install them."
+    elif command_exists dnf; then
+        warn "Run ./fedora-install.sh to install them."
+    fi
 fi
 
 ok "Done."

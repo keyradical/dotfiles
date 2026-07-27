@@ -29,7 +29,6 @@ else
     DOTFILES_DIR="${HOME}/.dotfiles"
 fi
 
-ZSH_PLUGINS_DIR="${HOME}/.local/share/zsh/plugins"
 TPM_DIR="${HOME}/.config/tmux/plugins/tpm"
 
 info()  { printf '\r[ .. ] %s\n' "$*"; }
@@ -341,37 +340,8 @@ install_dotbot() {
     die "pipx is required to install dotbot but was not found"
 }
 
-# ─── Zsh plugins ─────────────────────────────────────────────────────────────
-
-install_zsh_plugins() {
-    info "Installing zsh plugins..."
-
-    mkdir -p "$ZSH_PLUGINS_DIR"
-
-    local plugins=(
-        "zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions"
-        "zsh-history-substring-search|https://github.com/zsh-users/zsh-history-substring-search"
-        "zsh-syntax-highlighting|https://github.com/zsh-users/zsh-syntax-highlighting"
-        "zsh-completions|https://github.com/zsh-users/zsh-completions"
-    )
-
-    for entry in "${plugins[@]}"; do
-        local name="${entry%%|*}"
-        local url="${entry##*|}"
-        local dest="$ZSH_PLUGINS_DIR/$name"
-
-        if [[ -d "$dest/.git" ]]; then
-            info "Updating zsh plugin: $name"
-            git -C "$dest" pull --ff-only
-        else
-            info "Cloning zsh plugin: $name"
-            rm -rf "$dest"
-            git clone --depth=1 "$url" "$dest"
-        fi
-    done
-
-    ok "zsh plugins ready"
-}
+# Zsh plugins are installed by ./install (single source of truth — the plugin
+# list has to stay in sync with config/zsh/zshrc's source-plugin calls).
 
 # ─── Dotfiles ──────────────────────────────────────────────────────────────────
 
@@ -671,10 +641,9 @@ main() {
     enable_rpm_fusion
     update_system
     install_dnf_packages
-    install_starship
+    install_starship      # runs first so ./install prefers the dnf package
     install_dotbot
-    install_zsh_plugins
-    install_dotfiles      # TPM + tmux plugin install handled by ./install
+    install_dotfiles      # ./install handles zsh plugins + TPM + tmux plugins
     generate_sway_local
     setup_services
     setup_iio_buffer

@@ -9,3 +9,6 @@
 [alias]
 	wt = worktree
 	amend = commit --amend --no-edit
+[push]
+	default = current
+	autoSetupRemote = true
