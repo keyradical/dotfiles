@@ -154,3 +154,16 @@ fi
 
 # Source cargo env if present (provides PATH for cargo-installed bins)
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# oh-my-claudecode is a desktop-only convenience. ./install writes
+# ~/.dotfiles-host only for mac/pc/laptop, so its absence means a lean install:
+# a headless remote box, where OMC's agent orchestration is just overhead.
+#
+# Note this only quietens OMC's own scripts, which check the variable
+# themselves. It does NOT stop Claude Code from invoking the hooks — those are
+# registered by the plugin being enabled in settings.json, and the wrapper
+# (scripts/run.cjs) never reads this variable. The wrapper needs node 14+ to
+# parse at all, which is why ubuntu-install.sh installs a modern node.
+if [ ! -f "$HOME/.dotfiles-host" ]; then
+  export DISABLE_OMC=1
+fi

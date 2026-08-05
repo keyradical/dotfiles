@@ -34,6 +34,14 @@ fi
 NVIM_PREFIX="/opt/nvim-linux64"
 NVIM_MIN_MINOR=11   # LazyVim requires Neovim 0.11+
 
+# Ubuntu 22.04's apt node is 12.22, which cannot even parse optional chaining
+# (`?.`). Claude Code plugin hooks use it, so on jammy every hook fires a
+# SyntaxError before running a line. Installed from the official tarball rather
+# than a NodeSource apt repo to avoid adding a keyring and third-party source.
+NODE_PREFIX="/opt/node"
+NODE_VERSION="20.19.2"
+NODE_MIN_MAJOR=20
+
 info()  { printf '\r[ .. ] %s\n' "$*"; }
 ok()    { printf '\r[ OK ] %s\n' "$*"; }
 warn()  { printf '\r[WARN] %s\n' "$*" >&2; }
@@ -241,6 +249,81 @@ install_neovim() {
     fi
 }
 
+# ─── Node ────────────────────────────────────────────────────────────────────
+
+node_is_recent() {
+    command_exists node || return 1
+
+    local version major
+    version="$(node --version 2>/dev/null)"
+    version="${version#v}"
+    major="${version%%.*}"
+
+    [[ "$major" =~ ^[0-9]+$ ]] || return 1
+    (( major >= NODE_MIN_MAJOR ))
+}
+
+install_node() {
+    if node_is_recent; then
+        ok "node $(node --version) already installed"
+        return 0
+    fi
+
+    if [[ -z "$SUDO" ]]; then
+        warn "sudo not available — cannot install node to $NODE_PREFIX. Skipping."
+        warn "Claude Code plugin hooks will fail with SyntaxError on node < $NODE_MIN_MAJOR."
+        return 0
+    fi
+
+    local arch tarball
+    case "$(uname -m)" in
+        x86_64)        arch="x64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *) warn "No node tarball for arch '$(uname -m)' — skipping."; return 0 ;;
+    esac
+    tarball="node-v${NODE_VERSION}-linux-${arch}.tar.xz"
+
+    local tmpdir
+    tmpdir="$(mktemp -d)"
+
+    info "Downloading node v${NODE_VERSION} (${arch})..."
+    if ! curl -fsSL -o "${tmpdir}/${tarball}" \
+        "https://nodejs.org/dist/v${NODE_VERSION}/${tarball}"; then
+        rm -rf "$tmpdir"
+        warn "node download failed — skipping."
+        return 0
+    fi
+
+    info "Installing node to $NODE_PREFIX..."
+    tar -C "$tmpdir" -xJf "${tmpdir}/${tarball}"
+
+    local extracted
+    extracted="$(find "$tmpdir" -maxdepth 1 -type d -name 'node-v*' | head -1)"
+    if [[ -z "$extracted" ]]; then
+        rm -rf "$tmpdir"
+        warn "Unexpected tarball layout — skipping."
+        return 0
+    fi
+
+    $SUDO rm -rf "$NODE_PREFIX"
+    $SUDO mv "$extracted" "$NODE_PREFIX"
+    rm -rf "$tmpdir"
+
+    # Symlinked individually rather than putting $NODE_PREFIX/bin on PATH, so
+    # this works under bash during bootstrap and does not depend on a zsh rc.
+    local b
+    for b in node npm npx; do
+        [[ -e "${NODE_PREFIX}/bin/${b}" ]] && $SUDO ln -sf "${NODE_PREFIX}/bin/${b}" "/usr/local/bin/${b}"
+    done
+
+    if "${NODE_PREFIX}/bin/node" --version >/dev/null 2>&1; then
+        ok "node $("${NODE_PREFIX}/bin/node" --version) installed"
+    else
+        warn "node installed but will not run (glibc too old?)."
+        warn "Check: ${NODE_PREFIX}/bin/node --version"
+    fi
+}
+
 # ─── Dotfiles ────────────────────────────────────────────────────────────────
 
 install_dotfiles() {
@@ -342,6 +425,7 @@ echo ""
 install_apt_packages
 link_fd
 install_neovim
+install_node
 install_dotfiles
 set_login_shell
 
@@ -358,5 +442,5 @@ echo ""
 echo "  Then connect with:"
 echo "    ssh -t <host> -- tmux new -A -s main"
 echo ""
-echo "  Not installed (add if you need them): node/npm, gh, docker."
+echo "  Not installed (add if you need them): gh, docker."
 echo ""
