@@ -27,3 +27,6 @@ karabiner_*.json
 
 # Claude — local-only overrides
 **/.claude/settings.local.json
+
+# Claude — per-machine settings overlay, local to one box
+config/claude/settings.local.json

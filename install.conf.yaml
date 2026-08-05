@@ -34,5 +34,8 @@
     ~/.config/starship.toml: config/starship.toml
 
     # ---- Claude Code ----
-    ~/.claude/settings.json: config/claude/settings.json
+    # settings.json is NOT linked: ./install generates it by merging
+    # config/claude/settings.json with the per-host overlay
+    # config/claude/settings.<host>.json. Linking it would also mean every
+    # /config tweak landed as an uncommitted change in this repo.
     ~/.claude/hooks:         config/claude/hooks

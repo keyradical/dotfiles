@@ -1,0 +1,15 @@
+{
+  "//": "Overlay applied on lean installs (no ~/.dotfiles-host), i.e. headless remote boxes. Merged over settings.json by ./install. A null value deletes that key from the base.",
+
+  "//statusLine": "OMC's HUD shells out to omc-hud.mjs on every prompt; pointless on a headless box.",
+  "statusLine": null,
+
+  "//enabledPlugins": "OMC is desktop-only: its hooks run node wrappers on every tool call and Stop event, which is pure overhead when there is no local desktop to orchestrate.",
+  "enabledPlugins": {
+    "oh-my-claudecode@omc": null
+  },
+
+  "extraKnownMarketplaces": {
+    "omc": null
+  }
+}

@@ -357,6 +357,87 @@ esac
 # Restore any app data that the legacy-layout migration parked aside.
 restore_parked_config
 
+# ── Claude Code settings (base + per-host overlay) ──────────────────────────
+
+# ~/.claude/settings.json is generated, not symlinked. Claude Code has no
+# user-level settings.local.json to merge from, so a base + overlay split has to
+# be resolved here.
+#
+# Overlay is chosen by host class: config/claude/settings.<host>.json, with
+# "remote" used for lean installs (no ~/.dotfiles-host). Coder workspace
+# hostnames change on every rebuild, so keying on hostname would go stale.
+# config/claude/settings.local.json, if present, is applied last and is
+# gitignored — for one-off tweaks on a single box.
+#
+# In an overlay, a null value DELETES that key from the base, and keys starting
+# with "//" are treated as comments and dropped. That way the base stays the
+# full desktop config and only the remote overlay subtracts from it.
+CLAUDE_SETTINGS_OUT="${HOME}/.claude/settings.json"
+CLAUDE_OVERLAY="$BASEDIR/config/claude/settings.${HOST:-remote}.json"
+
+info "Generating $CLAUDE_SETTINGS_OUT (host=${HOST:-remote})"
+mkdir -p "${HOME}/.claude"
+
+# Earlier versions symlinked this file into the repo. Leaving the symlink would
+# make the write below edit the tracked file instead of generating a real one.
+if [[ -L "$CLAUDE_SETTINGS_OUT" ]]; then
+    info "Removing legacy settings.json symlink"
+    rm "$CLAUDE_SETTINGS_OUT"
+fi
+
+"$PYTHON_BIN" - "$BASEDIR/config/claude/settings.json" "$CLAUDE_OVERLAY" \
+               "$BASEDIR/config/claude/settings.local.json" "$CLAUDE_SETTINGS_OUT" <<'PY'
+import json, os, sys, shutil
+
+base_path, overlay_path, local_path, out_path = sys.argv[1:5]
+
+def load(p):
+    if not os.path.isfile(p):
+        return None
+    with open(p) as f:
+        return json.load(f)
+
+def merge(base, over):
+    for k, v in over.items():
+        if k.startswith("//"):
+            continue
+        if v is None:
+            base.pop(k, None)
+        elif isinstance(v, dict) and isinstance(base.get(k), dict):
+            merge(base[k], v)
+        else:
+            base[k] = v
+    return base
+
+result = load(base_path)
+if result is None:
+    sys.exit(f"missing base config: {base_path}")
+
+applied = []
+for p in (overlay_path, local_path):
+    over = load(p)
+    if over is not None:
+        merge(result, over)
+        applied.append(os.path.basename(p))
+
+rendered = json.dumps(result, indent=2) + "\n"
+
+# Never clobber unabsorbed /config edits silently: those are made in the Claude
+# Code UI and would otherwise vanish with no trace.
+if os.path.isfile(out_path):
+    with open(out_path) as f:
+        current = f.read()
+    if current != rendered:
+        shutil.copy2(out_path, out_path + ".bak")
+        print(f"[dotfiles] settings.json differed; previous saved to {out_path}.bak")
+
+with open(out_path, "w") as f:
+    f.write(rendered)
+
+print("[dotfiles] overlays applied: " + (", ".join(applied) if applied else "none"))
+PY
+ok "Claude settings generated"
+
 # ── Starship ────────────────────────────────────────────────────────────────
 
 # zshrc runs `eval "$(starship init zsh)"` with no guard, so linking zshrc

@@ -121,11 +121,12 @@
     }
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
   "advisorModel": "opus",
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
+  "theme": "dark",
   "switchModelsOnFlag": false,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true
