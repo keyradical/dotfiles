@@ -155,6 +155,25 @@ fi
 # Source cargo env if present (provides PATH for cargo-installed bins)
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# A forwarded ssh agent lives at a per-connection path like
+# /tmp/auth-agentNNNN/listener.sock, and that socket dies with the connection.
+# tmux outlives it: `tmux new -A` reattaches a session whose panes still hold
+# the old path, and update-environment only refreshes the session environment
+# on attach, never the environment of already-running panes. Result is a dead
+# SSH_AUTH_SOCK in every long-lived pane and git@github.com failing there while
+# a fresh ssh works fine.
+#
+# Point everything at one stable path instead and re-aim the symlink on each new
+# connection, so existing panes recover the moment you reconnect.
+#
+# This belongs in zshenv, not zshrc: `ssh -t host -- tmux new -A -s main` runs
+# tmux via `$SHELL -c`, which sources zshenv only.
+if [ -n "$SSH_CONNECTION" ] && [ -S "$SSH_AUTH_SOCK" ] \
+   && [ "$SSH_AUTH_SOCK" != "$HOME/.ssh/agent.sock" ]; then
+  mkdir -p "$HOME/.ssh" && ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/agent.sock"
+fi
+[ -S "$HOME/.ssh/agent.sock" ] && export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+
 # oh-my-claudecode is a desktop-only convenience. ./install writes
 # ~/.dotfiles-host only for mac/pc/laptop, so its absence means a lean install:
 # a headless remote box, where OMC's agent orchestration is just overhead.
