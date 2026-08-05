@@ -174,6 +174,21 @@ if [ -n "$SSH_CONNECTION" ] && [ -S "$SSH_AUTH_SOCK" ] \
 fi
 [ -S "$HOME/.ssh/agent.sock" ] && export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
 
+# Coder workspaces inject GIT_SSH_COMMAND='<tmp>/coder gitssh --', which routes
+# git through the workspace's own key instead of the forwarded agent. That key
+# is not on my GitHub account, so every fetch/push fails with
+# "Permission denied (publickey)" even though `ssh -T git@github.com` succeeds.
+#
+# Prefer my own forwarded key when one is actually reachable; otherwise leave
+# coder's wrapper alone, since it is better than no auth at all.
+case "${GIT_SSH_COMMAND:-}" in
+  *"coder gitssh"*)
+    if [ -S "${SSH_AUTH_SOCK:-}" ] && ssh-add -l >/dev/null 2>&1; then
+      unset GIT_SSH_COMMAND
+    fi
+    ;;
+esac
+
 # oh-my-claudecode is a desktop-only convenience. ./install writes
 # ~/.dotfiles-host only for mac/pc/laptop, so its absence means a lean install:
 # a headless remote box, where OMC's agent orchestration is just overhead.
