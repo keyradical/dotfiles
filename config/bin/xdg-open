@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+#
+# xdg-open shim for headless boxes.
+#
+# CLIs that start an OAuth flow (bk, gh, gcloud, wrangler...) shell out to
+# xdg-open / x-www-browser / www-browser. None of those exist on a bare Ubuntu
+# box, so the tool prints an error and you are left copying a URL by hand.
+#
+# This stands in for them: it renders the URL as an OSC 8 hyperlink so it is
+# clickable in the terminal you are actually sitting at, copies it to your local
+# clipboard via OSC 52, and exits 0 so the caller proceeds to wait for the
+# callback instead of treating this as a failure.
+#
+# Note it cannot make the callback reachable — an OAuth redirect to
+# 127.0.0.1:<port> listens on THIS box, so the browser on your machine needs an
+# ssh tunnel. When a loopback port appears in the URL, the exact command to run
+# is printed.
+
+set -u
+
+url="${1:-}"
+if [ -z "$url" ]; then
+    echo "xdg-open: no URL given" >&2
+    exit 1
+fi
+
+esc=$(printf '\033')
+bel=$(printf '\007')
+
+printf '\n  Open this on your local machine:\n\n'
+# OSC 8 hyperlink — the visible text is the URL too, so it stays usable in
+# terminals that do not support hyperlinks.
+printf '  %s]8;;%s%s%s%s]8;;%s\n' "$esc" "$url" "$bel" "$url" "$esc" "$bel"
+
+# OSC 52 copies to the clipboard of the terminal at the far end. tmux.conf sets
+# set-clipboard on, which relays this out through tmux to the local terminal.
+if command -v base64 >/dev/null 2>&1; then
+    b64=$(printf '%s' "$url" | base64 | tr -d '\n')
+    printf '%s]52;c;%s%s' "$esc" "$b64" "$bel"
+    printf '\n  (copied to your local clipboard)\n'
+fi
+
+# Pull a loopback callback port out of the URL, plain or percent-encoded.
+port=$(printf '%s' "$url" \
+    | sed -n -e 's/.*127\.0\.0\.1%3[Aa]\([0-9]\{1,5\}\).*/\1/p' \
+             -e 's/.*127\.0\.0\.1:\([0-9]\{1,5\}\).*/\1/p' \
+             -e 's/.*localhost%3[Aa]\([0-9]\{1,5\}\).*/\1/p' \
+             -e 's/.*localhost:\([0-9]\{1,5\}\).*/\1/p' \
+    | head -1)
+
+if [ -n "$port" ]; then
+    printf '\n  Callback listens on 127.0.0.1:%s of THIS box, so tunnel it\n' "$port"
+    printf '  before completing the login — run on your local machine:\n\n'
+    printf '    ssh -N -L %s:127.0.0.1:%s <this-box>\n' "$port" "$port"
+fi
+
+printf '\n'
+exit 0

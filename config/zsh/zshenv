@@ -189,6 +189,12 @@ case "${GIT_SSH_COMMAND:-}" in
     ;;
 esac
 
+# Some CLIs consult $BROWSER instead of shelling out to xdg-open, so point it at
+# the same shim. Only over ssh: on a desktop the real browser should win.
+if [ -n "$SSH_CONNECTION" ] && [ -x "$HOME/.local/bin/xdg-open" ]; then
+  export BROWSER="$HOME/.local/bin/xdg-open"
+fi
+
 # oh-my-claudecode is a desktop-only convenience. ./install writes
 # ~/.dotfiles-host only for mac/pc/laptop, so its absence means a lean install:
 # a headless remote box, where OMC's agent orchestration is just overhead.

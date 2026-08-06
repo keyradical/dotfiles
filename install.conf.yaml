@@ -33,6 +33,13 @@
     ~/.config/git:           config/git
     ~/.config/starship.toml: config/starship.toml
 
+    # ---- ~/.local/bin shims (zshenv already has this on PATH) ----
+    # Stand-ins for the browser launchers that OAuth flows shell out to. Absent
+    # on a bare Ubuntu box; harmless on macOS, where nothing calls them.
+    ~/.local/bin/xdg-open:       config/bin/xdg-open
+    ~/.local/bin/x-www-browser:  config/bin/xdg-open
+    ~/.local/bin/www-browser:    config/bin/xdg-open
+
     # ---- Claude Code ----
     # settings.json is NOT linked: ./install generates it by merging
     # config/claude/settings.json with the per-host overlay
