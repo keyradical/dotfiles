@@ -170,7 +170,14 @@ fi
 # tmux via `$SHELL -c`, which sources zshenv only.
 if [ -n "$SSH_CONNECTION" ] && [ -S "$SSH_AUTH_SOCK" ] \
    && [ "$SSH_AUTH_SOCK" != "$HOME/.ssh/agent.sock" ]; then
-  mkdir -p "$HOME/.ssh" && ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/agent.sock"
+  # Only claim the shared link when it is missing or already dead. Several ssh
+  # connections can be open at once (a second terminal, a port-forward, a
+  # one-off `ssh host cmd`), and each runs this file. Re-aiming a *working* link
+  # at this connection's socket would break every pane belonging to the other
+  # connections the moment this one closes.
+  if ! SSH_AUTH_SOCK="$HOME/.ssh/agent.sock" ssh-add -l >/dev/null 2>&1; then
+    mkdir -p "$HOME/.ssh" && ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/agent.sock"
+  fi
 fi
 [ -S "$HOME/.ssh/agent.sock" ] && export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
 
